@@ -19,5 +19,9 @@ func _enter_tree():
 
 func _exit_tree():
 	remove_autoload_singleton("EntityManager")
+	
+	remove_custom_type("SpatialEntity")
+	remove_custom_type("Node2DEntity")
+	
 	remove_custom_type("LogicNode")
 	remove_custom_type("SpatialLogicNode")

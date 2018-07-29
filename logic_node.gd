@@ -51,15 +51,6 @@ func _transform_changed():
 ##############
 # Networking #
 ##############
-
-func network_set_unreliable(p_property, p_value):
-	return
-	
-	if (get_tree().has_network_peer()):
-		for id in NetworkManager.get_synced_peers():
-			rset_unreliable_id(id, p_property, p_value)
-	else:
-		set(p_property, p_value)
 	
 func is_entity_master():
 	if !get_tree().has_network_peer():

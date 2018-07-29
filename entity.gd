@@ -2,6 +2,11 @@ extends Node
 tool
 
 """
+Entity Manager
+"""
+var entity_manager = null
+
+"""
 Transform Notification
 """
 export(NodePath) var transform_notification_node_path = NodePath()
@@ -37,7 +42,8 @@ func _entity_ready():
 			logic_node._entity_ready()
 
 func _ready():
-	if !Engine.is_editor_hint():
+	if !Engine.is_editor_hint() and has_node("/root/EntityManager"):
+		entity_manager = get_node("/root/EntityManager")
 		add_to_group("Entities")
 		
 		if has_node(transform_notification_node_path):
@@ -60,6 +66,6 @@ func _ready():
 			if network_logic_node == self:
 				network_logic_node = null
 	
-		connect("ready", EntityManager, "_entity_ready", [self])
-		connect("tree_exiting", EntityManager, "_entity_exiting", [self])
+		connect("ready", entity_manager, "_entity_ready", [self])
+		connect("tree_exiting", entity_manager, "_entity_exiting", [self])
 		
