@@ -60,12 +60,13 @@ func _get_property_list():
 	var properties = []
 	if has_node(logic_node_path):
 		var logic_node = get_node(logic_node_path)
-		if is_subnode_property_valid():
-			var logic_node_property_list = logic_node.get_property_list()
-			for property in logic_node_property_list:
-				if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-					property.name = "logic_node/" + property.name
-					properties.push_back(property)
+		if logic_node != self:
+			if is_subnode_property_valid():
+				var logic_node_property_list = logic_node.get_property_list()
+				for property in logic_node_property_list:
+					if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+						property.name = "logic_node/" + property.name
+						properties.push_back(property)
 		
 	return properties
 	
@@ -73,28 +74,30 @@ func get_sub_property(p_path, p_property, p_sub_node_name):
 	var variant = null
 	if has_node(p_path):
 		var node = get_node(p_path)
-		var property = sub_property_path(p_property, p_sub_node_name)
-		variant = node.get(property)
-		if typeof(variant) == TYPE_NODE_PATH:
-			if variant != "" and node.has_node(variant):
-				var sub_node = node.get_node(variant)
-				variant = get_path_to(sub_node)
-			else:
-				variant = NodePath()
+		if node != self:
+			var property = sub_property_path(p_property, p_sub_node_name)
+			variant = node.get(property)
+			if typeof(variant) == TYPE_NODE_PATH:
+				if variant != "" and node.has_node(variant):
+					var sub_node = node.get_node(variant)
+					variant = get_path_to(sub_node)
+				else:
+					variant = NodePath()
 	return variant
 
 func set_sub_property(p_path, p_property, p_value, p_sub_node_name):
 	if has_node(p_path):
 		var node = get_node(p_path)
-		var property = sub_property_path(p_property, p_sub_node_name)
-		var variant = p_value
-		if typeof(variant) == TYPE_NODE_PATH:
-			if variant != "" and has_node(variant):
-				var sub_node = get_node(variant)
-				return node.set(property, node.get_path_to(sub_node))
-			else:
-				return node.set(property, NodePath())
-		return node.set(property, variant)
+		if node != self:
+			var property = sub_property_path(p_property, p_sub_node_name)
+			var variant = p_value
+			if typeof(variant) == TYPE_NODE_PATH:
+				if variant != "" and has_node(variant):
+					var sub_node = get_node(variant)
+					return node.set(property, node.get_path_to(sub_node))
+				else:
+					return node.set(property, NodePath())
+			return node.set(property, variant)
 	return false
 	
 func _get(p_property):
