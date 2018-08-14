@@ -48,6 +48,14 @@ func _exit_tree():
 func _transform_changed():
 	pass
 	
+func cache_node(p_node_path : NodePath) -> Node:
+	if has_node(p_node_path):
+		var node = get_node(p_node_path)
+		if node != self:
+			return node
+		
+	return null
+	
 ##############
 # Networking #
 ##############
