@@ -16,6 +16,20 @@ func set_global_position(p_position):
 		printerr("Not connected to a Node2D node!")
 		
 	return Vector2()
+	
+func get_transform():
+	if entity_node and entity_node is Node2D:
+		return entity_node.transform
+	else:
+		printerr("Not connected to a Node2D node!")
+		
+	return Transform()
+		
+func set_transform(p_transform):
+	if entity_node and entity_node is Node2D:
+		entity_node.transform = p_transform
+	else:
+		printerr("Not connected to a Node2D node!")
 		
 func get_global_transform():
 	if entity_node  and entity_node is Node2D:

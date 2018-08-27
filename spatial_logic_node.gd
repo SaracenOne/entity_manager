@@ -16,6 +16,20 @@ func set_global_origin(p_origin):
 		printerr("Not connected to a Spatial node!")
 		
 	return Vector3()
+	
+func get_transform():
+	if entity_node and entity_node is Spatial:
+		return entity_node.transform
+	else:
+		printerr("Not connected to a Spatial node!")
+		
+	return Transform()
+		
+func set_transform(p_transform):
+	if entity_node and entity_node is Spatial:
+		entity_node.transform = p_transform
+	else:
+		printerr("Not connected to a Spatial node!")
 		
 func get_global_transform():
 	if entity_node and entity_node is Spatial:
