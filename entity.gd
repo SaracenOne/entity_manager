@@ -2,6 +2,13 @@ extends Node
 tool
 
 """
+Parenting
+"""
+
+var entity_parent = null
+var entity_children = []
+
+"""
 Entity Manager
 """
 var entity_manager = null
@@ -65,8 +72,9 @@ func _get_property_list():
 				var logic_node_property_list = logic_node.get_property_list()
 				for property in logic_node_property_list:
 					if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-						property.name = "logic_node/" + property.name
-						properties.push_back(property)
+						if property.name.substr(0, 1) != '_': 
+							property.name = "logic_node/" + property.name
+							properties.push_back(property)
 		
 	return properties
 	
@@ -76,13 +84,14 @@ func get_sub_property(p_path, p_property, p_sub_node_name):
 		var node = get_node(p_path)
 		if node != self:
 			var property = sub_property_path(p_property, p_sub_node_name)
-			variant = node.get(property)
-			if typeof(variant) == TYPE_NODE_PATH:
-				if variant != "" and node.has_node(variant):
-					var sub_node = node.get_node(variant)
-					variant = get_path_to(sub_node)
-				else:
-					variant = NodePath()
+			if property.substr(0, 1) != '_': 	
+				variant = node.get(property)
+				if typeof(variant) == TYPE_NODE_PATH:
+					if variant != "" and node.has_node(variant):
+						var sub_node = node.get_node(variant)
+						variant = get_path_to(sub_node)
+					else:
+						variant = NodePath()
 	return variant
 
 func set_sub_property(p_path, p_property, p_value, p_sub_node_name):
@@ -90,14 +99,15 @@ func set_sub_property(p_path, p_property, p_value, p_sub_node_name):
 		var node = get_node(p_path)
 		if node != self:
 			var property = sub_property_path(p_property, p_sub_node_name)
-			var variant = p_value
-			if typeof(variant) == TYPE_NODE_PATH:
-				if variant != "" and has_node(variant):
-					var sub_node = get_node(variant)
-					return node.set(property, node.get_path_to(sub_node))
-				else:
-					return node.set(property, NodePath())
-			return node.set(property, variant)
+			if property.substr(0, 1) != '_':
+				var variant = p_value
+				if typeof(variant) == TYPE_NODE_PATH:
+					if variant != "" and has_node(variant):
+						var sub_node = get_node(variant)
+						return node.set(property, node.get_path_to(sub_node))
+					else:
+						return node.set(property, NodePath())
+				return node.set(property, variant)
 	return false
 	
 func _get(p_property):
@@ -113,8 +123,64 @@ func _set(p_property : String, p_value):
 		return_val = set_sub_property(logic_node_path, p_property, p_value, "logic_node")
 		
 	return return_val
-
+	
+func _add_entity_child(p_entity_child):
+	if p_entity_child:
+		if entity_children.has(p_entity_child):
+			ErrorManager.fatal_error("_add_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+		else:
+			entity_children.push_back(p_entity_child)
+	else:
+		ErrorManager.fatal_error("_add_entity_child: attempted to add null entity child!")
+	
+func _remove_entity_child(p_entity_child):
+	if p_entity_child:
+		if entity_children.has(p_entity_child):
+			var index = entity_children.find(p_entity_child)
+			if index != -1:
+				entity_children.remove(index)
+			else:
+				ErrorManager.fatal_error("_remove_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+		else:
+			ErrorManager.fatal_error("_remove_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+	else:
+		ErrorManager.fatal_error("_remove_entity_child: attempted to remove null entity child!")
+	
+func _has_entity_parent() -> bool:
+	if entity_parent != null:
+		if entity_parent.get_script() == get_script():
+			return true
 			
+	return false
+	
+func _set_entity_parent(p_parent):
+	if p_parent == entity_parent:
+		return
+		
+	# Remove any previous parents
+	if _has_entity_parent():
+		entity_parent._remove_entity_child(self)
+	
+	# Set the entity parent if its a valid entity
+	if p_parent and p_parent.get_script() == get_script():
+		entity_parent = p_parent
+	
+	# If the entity parent is not null, check if it is valid, and then add it to its list of children
+	if entity_parent != null:
+		entity_parent._add_entity_child(self)
+			
+func _enter_tree():
+	if Engine.is_editor_hint() == false:
+		if _has_entity_parent():
+			ErrorManager.fatal_error("Entity is trying to enter the tree with an existing entity parent!")
+		else:
+			_set_entity_parent(get_parent())
+	
+func _exit_tree():
+	if Engine.is_editor_hint() == false:
+		if _has_entity_parent():
+			_set_entity_parent(null)
+	
 func _ready():
 	if !Engine.is_editor_hint() and has_node("/root/EntityManager"):
 		entity_manager = get_node("/root/EntityManager")
