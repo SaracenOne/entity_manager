@@ -124,7 +124,7 @@ func _set(p_property : String, p_value):
 		
 	return return_val
 	
-func _add_entity_child(p_entity_child):
+func _add_entity_child_internal(p_entity_child):
 	if p_entity_child:
 		if entity_children.has(p_entity_child):
 			ErrorManager.fatal_error("_add_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
@@ -133,7 +133,7 @@ func _add_entity_child(p_entity_child):
 	else:
 		ErrorManager.fatal_error("_add_entity_child: attempted to add null entity child!")
 	
-func _remove_entity_child(p_entity_child):
+func _remove_entity_child_internal(p_entity_child):
 	if p_entity_child:
 		if entity_children.has(p_entity_child):
 			var index = entity_children.find(p_entity_child)
@@ -146,40 +146,73 @@ func _remove_entity_child(p_entity_child):
 	else:
 		ErrorManager.fatal_error("_remove_entity_child: attempted to remove null entity child!")
 	
-func _has_entity_parent() -> bool:
+func _has_entity_parent_internal() -> bool:
 	if entity_parent != null:
 		if entity_parent.get_script() == get_script():
 			return true
 			
 	return false
 	
-func _set_entity_parent(p_parent):
-	if p_parent == entity_parent:
+func _set_entity_parent_internal(p_entity_parent):
+	if p_entity_parent == entity_parent:
 		return
 		
 	# Remove any previous parents
-	if _has_entity_parent():
-		entity_parent._remove_entity_child(self)
+	if _has_entity_parent_internal():
+		entity_parent._remove_entity_child_internal(self)
 	
 	# Set the entity parent if its a valid entity
-	if p_parent and p_parent.get_script() == get_script():
-		entity_parent = p_parent
+	if p_entity_parent == null or (p_entity_parent and p_entity_parent.get_script() == get_script()):
+		entity_parent = p_entity_parent
 	
 	# If the entity parent is not null, check if it is valid, and then add it to its list of children
 	if entity_parent != null:
-		entity_parent._add_entity_child(self)
+		entity_parent._add_entity_child_internal(self)
+		
+func set_entity_parent(p_entity_parent):
+	# Same parent, no update needed
+	if p_entity_parent == entity_parent:
+		return
+	
+	# Save the global transform
+	var last_global_transform = Transform()
+	if logic_node:
+		last_global_transform = logic_node.get_global_transform()
+	
+	# Remove it from the tree and remove its original entity parent
+	if is_inside_tree():
+		get_parent().remove_child(self)
+	
+	# Make sure that the entity parent is null or a valid entity node
+	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
+		# Now add it back into the tree which will automatically reparent it
+		if p_entity_parent == null:
+			network_identity_node.network_replication_manager.get_entity_root_node().add_child(self)
+		else:
+			p_entity_parent.add_child(self)
+			
+		# Reload the previously saved global transform
+		if logic_node:
+			logic_node.set_global_transform(last_global_transform)
+		
+		# Now send the network update...
+		if network_identity_node:
+			network_identity_node.send_parent_entity_update()
+		
+func clear_entity_parent():
+	set_entity_parent(null)
 			
 func _enter_tree():
 	if Engine.is_editor_hint() == false:
-		if _has_entity_parent():
+		if _has_entity_parent_internal():
 			ErrorManager.fatal_error("Entity is trying to enter the tree with an existing entity parent!")
 		else:
-			_set_entity_parent(get_parent())
+			_set_entity_parent_internal(get_parent())
 	
 func _exit_tree():
 	if Engine.is_editor_hint() == false:
-		if _has_entity_parent():
-			_set_entity_parent(null)
+		if _has_entity_parent_internal():
+			_set_entity_parent_internal(null)
 	
 func _ready():
 	if !Engine.is_editor_hint() and has_node("/root/EntityManager"):
