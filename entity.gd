@@ -49,7 +49,7 @@ func _entity_ready():
 			logic_node._entity_ready()
 			
 func is_subnode_property_valid():
-	return filename != "" or (is_inside_tree() and get_tree().edited_scene_root() and get_tree().edited_scene_root() == self)
+	return filename != "" or (is_inside_tree() and get_tree().edited_scene_root and get_tree().edited_scene_root == self)
 
 static func sub_property_path(p_property : String, p_sub_node_name : String) -> String:
 	var split_property = p_property.split("/", -1)
@@ -239,6 +239,12 @@ func _ready():
 			if network_logic_node == self:
 				network_logic_node = null
 	
-		connect("ready", entity_manager, "_entity_ready", [self])
-		connect("tree_exiting", entity_manager, "_entity_exiting", [self])
+		var connect_result = OK
+		
+		connect_result = connect("ready", entity_manager, "_entity_ready", [self])
+		if connect_result != OK:
+			printerr("entity: ready could not be connected!")
+		connect_result = connect("tree_exiting", entity_manager, "_entity_exiting", [self])
+		if connect_result != OK:
+			printerr("entity: tree_exiting could not be connected!")
 		

@@ -1,14 +1,8 @@
 extends "component_node.gd"
 tool
 
-# Managers
-var entity_manager = null
-
 # Front-facing members
 var update_fps = 15 setget set_update_fps, get_update_fps
-
-# Private members
-var previous_entity_process_time = 0.0
 
 func set_update_fps(p_fps):
 	update_fps = p_fps
@@ -70,7 +64,8 @@ func is_entity_master():
 			return false
 	
 func _entity_process(p_delta):
-	pass
+	if p_delta > 0.0:
+		pass
 	
 func _entity_ready():
 	pass
