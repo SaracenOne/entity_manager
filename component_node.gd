@@ -1,4 +1,5 @@
 extends Node
+class_name ComponentNode
 tool
 
 export(NodePath) var _entity_node_path = NodePath()
