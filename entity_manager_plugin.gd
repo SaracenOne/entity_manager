@@ -1,12 +1,12 @@
 extends EditorPlugin
 tool
 
-var editor_interface = null
+var editor_interface : EditorInterface = null
 
-func get_name(): 
+func get_name() -> String: 
 	return "EntityManager"
 
-func _enter_tree():
+func _enter_tree() -> void:
 	editor_interface = get_editor_interface()
 	
 	add_autoload_singleton("EntityManager", "res://addons/entity_manager/entity_manager.gd")
@@ -17,11 +17,11 @@ func _enter_tree():
 	add_custom_type("LogicNode", "Node", preload("logic_node.gd"), editor_interface.get_base_control().get_icon("Node", "EditorIcons"))
 	add_custom_type("SpatialLogicNode", "Node", preload("spatial_logic_node.gd"), editor_interface.get_base_control().get_icon("Node", "EditorIcons"))
 
-func _exit_tree():
-	remove_autoload_singleton("EntityManager")
-	
+func _exit_tree() -> void:
 	remove_custom_type("SpatialEntity")
 	remove_custom_type("Node2DEntity")
 	
 	remove_custom_type("LogicNode")
 	remove_custom_type("SpatialLogicNode")
+
+	remove_autoload_singleton("EntityManager")
