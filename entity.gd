@@ -67,11 +67,11 @@ static func sub_property_path(p_property : String, p_sub_node_name : String) -> 
 			
 func _get_property_list() -> Array:
 	var properties : Array = []
-	var logic_node : Node = get_node(logic_node_path)
-	if logic_node and logic_node != self:
+	var node : Node = get_node(logic_node_path)
+	if node and node != self:
 		if is_subnode_property_valid():
-			var logic_node_property_list = logic_node.get_property_list()
-			for property in logic_node_property_list:
+			var node_property_list = node.get_property_list()
+			for property in node_property_list:
 				if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 					if property.name.substr(0, 1) != '_': 
 						property.name = "logic_node/" + property.name
@@ -83,7 +83,6 @@ func get_sub_property(p_path : NodePath, p_property : String, p_sub_node_name : 
 	var variant = null
 	var node = get_node_or_null(p_path)
 	if node and node != self:
-		return variant
 		var property : String = sub_property_path(p_property, p_sub_node_name)
 		if property.substr(0, 1) != '_': 
 			variant = node.get(property)
@@ -101,7 +100,6 @@ func get_sub_property(p_path : NodePath, p_property : String, p_sub_node_name : 
 func set_sub_property(p_path : NodePath, p_property : String, p_value, p_sub_node_name : String) -> bool:
 	var node = get_node_or_null(p_path)
 	if node != null and node != self:
-		return false
 		var property : String = sub_property_path(p_property, p_sub_node_name)
 		if property.substr(0, 1) != '_':
 			var variant = p_value
@@ -133,8 +131,9 @@ func _set(p_property : String, p_value) -> bool:
 	
 func _add_entity_child_internal(p_entity_child : Node) -> void:
 	if p_entity_child:
+		var child_name : String = p_entity_child.get_name()
 		if entity_children.has(p_entity_child):
-			ErrorManager.error("_add_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+			ErrorManager.error("_add_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
 			entity_children.push_back(p_entity_child)
 	else:
@@ -142,14 +141,15 @@ func _add_entity_child_internal(p_entity_child : Node) -> void:
 	
 func _remove_entity_child_internal(p_entity_child : Node) -> void:
 	if p_entity_child:
+		var child_name : String = p_entity_child.get_name()
 		if entity_children.has(p_entity_child):
 			var index = entity_children.find(p_entity_child)
 			if index != -1:
 				entity_children.remove(index)
 			else:
-				ErrorManager.error("_remove_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+				ErrorManager.error("_remove_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
-			ErrorManager.error("_remove_entity_child: does not have entity child " + p_entity_child.get_name() + "!")
+			ErrorManager.error("_remove_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 	else:
 		ErrorManager.error("_remove_entity_child: attempted to remove null entity child!")
 	
