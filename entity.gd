@@ -26,28 +26,29 @@ var transform_notification_node : Node = null
 Logic Node
 """
 export(NodePath) var logic_node_path : NodePath = NodePath()
-var logic_node : Node = null setget set_logic_node, get_logic_node
-
-func set_logic_node(p_logic_node : Node) -> void:
-	logic_node = p_logic_node
 	
 func get_logic_node() -> Node:
-	return logic_node
+	return get_node_or_null(logic_node_path)
 
 """
 Network Identity Node
 """
 export(NodePath) var network_identity_node_path : NodePath = NodePath()
-var network_identity_node : Node = null
+
+func get_network_identity_node() -> Node:
+	return get_node_or_null(network_identity_node_path)
 
 """
 Network Logic Node
 """
 export(NodePath) var network_logic_node_path : NodePath = NodePath()
-var network_logic_node : Node = null
+
+func get_network_logic_node() -> Node:
+	return get_node_or_null(network_logic_node_path)
 
 func _entity_ready() -> void:
 	if !Engine.is_editor_hint():
+		var logic_node : Node = get_logic_node()
 		if logic_node:
 			logic_node._entity_ready()
 			
@@ -183,6 +184,8 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 	
 	# Save the global transform
 	var last_global_transform : Transform = Transform()
+	var logic_node : Node = get_logic_node()
+	
 	if logic_node:
 		last_global_transform = logic_node.get_global_transform()
 	
@@ -192,9 +195,12 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 	
 	# Make sure that the entity parent is null or a valid entity node
 	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
+		var network_identity_node : Node = get_network_identity_node()
+		
 		# Now add it back into the tree which will automatically reparent it
 		if p_entity_parent == null:
-			network_identity_node.network_replication_manager.get_entity_root_node().add_child(self)
+			if network_identity_node:
+				network_identity_node.network_replication_manager.get_entity_root_node().add_child(self)
 		else:
 			p_entity_parent.add_child(self)
 			
@@ -230,19 +236,7 @@ func _ready() -> void:
 			transform_notification_node = get_node_or_null(transform_notification_node_path)
 			if transform_notification_node == self:
 				transform_notification_node = null
-		
-			logic_node = get_node_or_null(logic_node_path)
-			if logic_node == self:
-				logic_node = null
-			
-			network_identity_node = get_node_or_null(network_identity_node_path)
-			if network_identity_node == self:
-				network_identity_node = null
-				
-			network_logic_node = get_node_or_null(network_logic_node_path)
-			if network_logic_node == self:
-				network_logic_node = null
-			
+
 			if connect("ready", entity_manager, "_entity_ready", [self]) != OK:
 				printerr("entity: ready could not be connected!")
 			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:
