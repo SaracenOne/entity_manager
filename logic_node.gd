@@ -4,13 +4,13 @@ tool
 # Front-facing members
 var update_fps : int = 15 setget set_update_fps, get_update_fps
 
-func set_update_fps(p_fps):
+func set_update_fps(p_fps : int) -> void:
 	update_fps = p_fps
 	
-func get_update_fps():
+func get_update_fps() -> int:
 	return update_fps
 
-func _get_property_list():
+func _get_property_list() -> Array:
 	var property_list : Array = []
 
 	property_list.push_back({"name":"update_fps", "type": TYPE_INT, "hint":PROPERTY_HINT_NONE})
