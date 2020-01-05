@@ -1,7 +1,9 @@
 extends Node
 tool
 
+const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 var mutex : Mutex = Mutex.new()
+
 var entity_pool : Array = []
 
 signal entity_added(p_entity)
@@ -17,11 +19,9 @@ func _entity_exiting(p_entity : Node) -> void:
 	emit_signal("entity_removed", p_entity)
 
 func _add_entity(p_entity : Node) -> void:
-	mutex.lock()
+	var mutex_lock : mutex_lock_const = mutex_lock_const.new(mutex)
 	entity_pool.append(p_entity)
-	mutex.unlock()
 	
 func _remove_entity(p_entity : Node) -> void:
-	mutex.lock()
+	var mutex_lock : mutex_lock_const = mutex_lock_const.new(mutex)
 	entity_pool.erase(p_entity)
-	mutex.unlock()
