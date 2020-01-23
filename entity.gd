@@ -26,25 +26,28 @@ var transform_notification_node : Node = null
 Logic Node
 """
 export(NodePath) var logic_node_path : NodePath = NodePath()
+var logic_node : Node = null
 	
 func get_logic_node() -> Node:
-	return get_node_or_null(logic_node_path)
+	return logic_node
 
 """
 Network Identity Node
 """
 export(NodePath) var network_identity_node_path : NodePath = NodePath()
+var network_identity_node : Node = null
 
 func get_network_identity_node() -> Node:
-	return get_node_or_null(network_identity_node_path)
+	return network_identity_node
 
 """
 Network Logic Node
 """
 export(NodePath) var network_logic_node_path : NodePath = NodePath()
+var network_logic_node : Node = null
 
 func get_network_logic_node() -> Node:
-	return get_node_or_null(network_logic_node_path)
+	return network_logic_node
 
 func _entity_ready() -> void:
 	if !Engine.is_editor_hint():
@@ -53,7 +56,10 @@ func _entity_ready() -> void:
 			logic_node._entity_ready()
 			
 func is_subnode_property_valid() -> bool:
-	return filename != "" or (is_inside_tree() and get_tree().edited_scene_root and get_tree().edited_scene_root == self)
+	if Engine.is_editor_hint() == false:
+		return true
+	else:
+		return filename != "" or (is_inside_tree() and get_tree().edited_scene_root and get_tree().edited_scene_root == self)
 
 static func sub_property_path(p_property : String, p_sub_node_name : String) -> String:
 	var split_property : PoolStringArray = p_property.split("/", -1)
@@ -117,18 +123,21 @@ func set_sub_property(p_path : NodePath, p_property : String, p_value, p_sub_nod
 	return false
 	
 func _get(p_property : String):
-	var variant = null
-	if is_subnode_property_valid():
-		variant = get_sub_property(logic_node_path, p_property, "logic_node")
-	return variant
-	
+	if Engine.is_editor_hint():
+		var variant = null
+		if is_subnode_property_valid():
+			variant = get_sub_property(logic_node_path, p_property, "logic_node")
+		return variant
 
 func _set(p_property : String, p_value) -> bool:
-	var return_val : bool = false
-	if is_subnode_property_valid():
-		return_val = set_sub_property(logic_node_path, p_property, p_value, "logic_node")
-		
-	return return_val
+	if Engine.is_editor_hint():
+		var return_val : bool = false
+		if is_subnode_property_valid():
+			return_val = set_sub_property(logic_node_path, p_property, p_value, "logic_node")
+			
+		return return_val
+	else:
+		return false
 	
 func _add_entity_child_internal(p_entity_child : Node) -> void:
 	if p_entity_child:
@@ -227,16 +236,31 @@ func _exit_tree() -> void:
 		if _has_entity_parent_internal():
 			_set_entity_parent_internal(null)
 	
+func cache_nodes() -> void:
+	transform_notification_node = get_node_or_null(transform_notification_node_path)
+	if transform_notification_node == self:
+		transform_notification_node = null
+		
+	logic_node = get_node_or_null(logic_node_path)
+	if logic_node == self:
+		logic_node = null
+		
+	network_identity_node = get_node_or_null(network_identity_node_path)
+	if network_identity_node == self:
+		network_identity_node = null
+		
+	network_logic_node = get_node_or_null(network_logic_node_path)
+	if network_logic_node == self:
+		network_logic_node = null
+	
 func _ready() -> void:
 	if !Engine.is_editor_hint():
 		entity_manager = get_node_or_null("/root/EntityManager")
 		if entity_manager:
 			add_to_group("Entities")
 			
-			transform_notification_node = get_node_or_null(transform_notification_node_path)
-			if transform_notification_node == self:
-				transform_notification_node = null
-
+			cache_nodes()
+				
 			if connect("ready", entity_manager, "_entity_ready", [self]) != OK:
 				printerr("entity: ready could not be connected!")
 			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:

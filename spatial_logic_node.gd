@@ -2,7 +2,6 @@ extends "logic_node.gd"
 tool
 
 func get_global_origin() -> Vector3:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		return entity_node.global_transform.origin
 	else:
@@ -11,14 +10,12 @@ func get_global_origin() -> Vector3:
 	return Vector3()
 	
 func set_global_origin(p_origin : Vector3) -> void:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		entity_node.global_transform.origin = p_origin
 	else:
 		printerr("Not connected to a Spatial node!")
 	
 func get_transform() -> Transform:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		return entity_node.transform
 	else:
@@ -27,14 +24,12 @@ func get_transform() -> Transform:
 	return Transform()
 		
 func set_transform(p_transform : Transform) -> void:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		entity_node.transform = p_transform
 	else:
 		printerr("Not connected to a Spatial node!")
 		
 func get_global_transform() -> Transform:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		return entity_node.global_transform
 	else:
@@ -43,7 +38,6 @@ func get_global_transform() -> Transform:
 	return Transform()
 		
 func set_global_transform(p_global_transform : Transform) -> void:
-	var entity_node : Node = get_entity_node()
 	if entity_node and entity_node is Spatial:
 		entity_node.global_transform = p_global_transform
 	else:
@@ -57,3 +51,6 @@ func _entity_process(p_delta : float) -> void:
 	
 func _entity_ready() -> void:
 	._entity_ready()
+	
+func _ready() -> void:
+	entity_node = get_entity_node()
