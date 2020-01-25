@@ -1,4 +1,4 @@
-extends "logic_node.gd"
+extends "simulation_logic.gd"
 tool
 
 func get_global_origin() -> Vector3:

@@ -1,4 +1,5 @@
 extends "component_node.gd"
+class_name SimulationLogic
 tool
 
 # Front-facing members

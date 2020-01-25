@@ -23,13 +23,13 @@ export(NodePath) var transform_notification_node_path : NodePath = NodePath()
 var transform_notification_node : Node = null
 
 """
-Logic Node
+Simulation Logic Node
 """
-export(NodePath) var logic_node_path : NodePath = NodePath()
-var logic_node : Node = null
+export(NodePath) var simulation_logic_node_path : NodePath = NodePath()
+var simulation_logic_node : Node = null
 	
-func get_logic_node() -> Node:
-	return logic_node
+func get_simulation_logic_node() -> Node:
+	return simulation_logic_node
 
 """
 Network Identity Node
@@ -51,9 +51,9 @@ func get_network_logic_node() -> Node:
 
 func _entity_ready() -> void:
 	if !Engine.is_editor_hint():
-		var logic_node : Node = get_logic_node()
-		if logic_node:
-			logic_node._entity_ready()
+		var simulation_logic_node : Node = get_simulation_logic_node()
+		if simulation_logic_node:
+			simulation_logic_node._entity_ready()
 			
 func is_subnode_property_valid() -> bool:
 	if Engine.is_editor_hint() == false:
@@ -74,14 +74,14 @@ static func sub_property_path(p_property : String, p_sub_node_name : String) -> 
 			
 func _get_property_list() -> Array:
 	var properties : Array = []
-	var node : Node = get_node(logic_node_path)
+	var node : Node = get_node(simulation_logic_node_path)
 	if node and node != self:
 		if is_subnode_property_valid():
 			var node_property_list = node.get_property_list()
 			for property in node_property_list:
 				if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 					if property.name.substr(0, 1) != '_': 
-						property.name = "logic_node/" + property.name
+						property.name = "simulation_logic_node/" + property.name
 						properties.push_back(property)
 		
 	return properties
@@ -126,14 +126,14 @@ func _get(p_property : String):
 	if Engine.is_editor_hint():
 		var variant = null
 		if is_subnode_property_valid():
-			variant = get_sub_property(logic_node_path, p_property, "logic_node")
+			variant = get_sub_property(simulation_logic_node_path, p_property, "simulation_logic_node")
 		return variant
 
 func _set(p_property : String, p_value) -> bool:
 	if Engine.is_editor_hint():
 		var return_val : bool = false
 		if is_subnode_property_valid():
-			return_val = set_sub_property(logic_node_path, p_property, p_value, "logic_node")
+			return_val = set_sub_property(simulation_logic_node_path, p_property, p_value, "simulation_logic_node")
 			
 		return return_val
 	else:
@@ -193,10 +193,10 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 	
 	# Save the global transform
 	var last_global_transform : Transform = Transform()
-	var logic_node : Node = get_logic_node()
+	var simulation_logic_node : Node = get_simulation_logic_node()
 	
-	if logic_node:
-		last_global_transform = logic_node.get_global_transform()
+	if simulation_logic_node:
+		last_global_transform = simulation_logic_node.get_global_transform()
 	
 	# Remove it from the tree and remove its original entity parent
 	if is_inside_tree():
@@ -214,8 +214,8 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 			p_entity_parent.add_child(self)
 			
 		# Reload the previously saved global transform
-		if logic_node:
-			logic_node.set_global_transform(last_global_transform)
+		if simulation_logic_node:
+			simulation_logic_node.set_global_transform(last_global_transform)
 		
 		# Now send the network update...
 		if network_identity_node:
@@ -241,9 +241,9 @@ func cache_nodes() -> void:
 	if transform_notification_node == self:
 		transform_notification_node = null
 		
-	logic_node = get_node_or_null(logic_node_path)
-	if logic_node == self:
-		logic_node = null
+	simulation_logic_node = get_node_or_null(simulation_logic_node_path)
+	if simulation_logic_node == self:
+		simulation_logic_node = null
 		
 	network_identity_node = get_node_or_null(network_identity_node_path)
 	if network_identity_node == self:
