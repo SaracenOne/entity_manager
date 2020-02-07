@@ -9,7 +9,7 @@ func get_global_position() -> Vector2:
 		
 	return Vector2()
 	
-func set_global_position(p_position : Vector2) -> void:
+func set_global_position(p_position : Vector2, _p_update_physics : bool = false) -> void:
 	if entity_node and entity_node is Node2D:
 		entity_node.global_position = p_position
 	else:
@@ -25,7 +25,7 @@ func get_transform() -> Transform2D:
 		
 	return Transform2D()
 		
-func set_transform(p_transform : Transform2D) -> void :
+func set_transform(p_transform : Transform2D, _p_update_physics : bool = false) -> void :
 	if entity_node and entity_node is Node2D:
 		entity_node.transform = p_transform
 	else:
@@ -39,7 +39,7 @@ func get_global_transform() -> Transform2D:
 		
 	return Transform2D()
 		
-func set_global_transform(p_global_transform : Transform2D) -> void:
+func set_global_transform(p_global_transform : Transform2D, _p_update_physics : bool = false) -> void:
 	if entity_node and entity_node is Node2D:
 		entity_node.global_transform = p_global_transform
 	else:

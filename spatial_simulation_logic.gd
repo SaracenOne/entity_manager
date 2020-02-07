@@ -9,7 +9,7 @@ func get_global_origin() -> Vector3:
 		
 	return Vector3()
 	
-func set_global_origin(p_origin : Vector3) -> void:
+func set_global_origin(p_origin : Vector3, _p_update_physics : bool = false) -> void:
 	if entity_node and entity_node is Spatial:
 		entity_node.global_transform.origin = p_origin
 	else:
@@ -23,7 +23,7 @@ func get_transform() -> Transform:
 		
 	return Transform()
 		
-func set_transform(p_transform : Transform) -> void:
+func set_transform(p_transform : Transform, _p_update_physics : bool = false) -> void:
 	if entity_node and entity_node is Spatial:
 		entity_node.transform = p_transform
 	else:
@@ -37,7 +37,7 @@ func get_global_transform() -> Transform:
 		
 	return Transform()
 		
-func set_global_transform(p_global_transform : Transform) -> void:
+func set_global_transform(p_global_transform : Transform, _p_update_physics : bool = false) -> void:
 	if entity_node and entity_node is Spatial:
 		entity_node.global_transform = p_global_transform
 	else:

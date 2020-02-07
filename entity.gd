@@ -7,9 +7,19 @@ const entity_manager_const = preload("entity_manager.gd")
 """
 Parenting
 """
+enum {
+	ENTITY_PARENT_STATE_OK,
+	ENTITY_PARENT_STATE_CHANGED
+	ENTITY_PARENT_STATE_INVALID
+}
 
+signal attachment_points_pre_change()
+signal attachment_points_post_change()
+
+var entity_parent_state : int = ENTITY_PARENT_STATE_OK
 var entity_parent : Node = null
 var entity_children : Array = []
+var attachment_id : int = 0
 
 """
 Entity Manager
@@ -51,7 +61,6 @@ func get_network_logic_node() -> Node:
 
 func _entity_ready() -> void:
 	if !Engine.is_editor_hint():
-		var simulation_logic_node : Node = get_simulation_logic_node()
 		if simulation_logic_node:
 			simulation_logic_node._entity_ready()
 			
@@ -138,6 +147,9 @@ func _set(p_property : String, p_value) -> bool:
 		return return_val
 	else:
 		return false
+		
+func get_attachment_node(p_attachment_id : int) -> Node:
+	return get_simulation_logic_node().get_attachment_node(p_attachment_id)
 	
 func _add_entity_child_internal(p_entity_child : Node) -> void:
 	if p_entity_child:
@@ -146,6 +158,8 @@ func _add_entity_child_internal(p_entity_child : Node) -> void:
 			ErrorManager.error("_add_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
 			entity_children.push_back(p_entity_child)
+			p_entity_child.connect("attachment_points_pre_change", self, "remove_to_attachment")
+			p_entity_child.connect("attachment_points_post_change", self, "add_to_attachment")
 	else:
 		ErrorManager.error("_add_entity_child: attempted to add null entity child!")
 	
@@ -156,6 +170,8 @@ func _remove_entity_child_internal(p_entity_child : Node) -> void:
 			var index = entity_children.find(p_entity_child)
 			if index != -1:
 				entity_children.remove(index)
+				p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
+				p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
 			else:
 				ErrorManager.error("_remove_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
@@ -186,6 +202,36 @@ func _set_entity_parent_internal(p_entity_parent : Node) -> void:
 	if entity_parent != null:
 		entity_parent._add_entity_child_internal(self)
 		
+func add_to_attachment():
+	if entity_parent != null:
+		# Remove it from the tree and remove its original entity parent
+		if is_inside_tree():
+			printerr("add_to_attachment: already inside tree!")
+		else:
+			# Now add it back into the tree which will automatically reparent it
+			entity_parent.get_attachment_point(attachment_id).add_child(self)
+	else:
+		printerr("add_to_attachment: does not have entity parent!")
+		
+func remove_from_attachment():
+	if entity_parent != null:
+		# Remove it from the tree and remove its original entity parent
+		if is_inside_tree():
+			get_parent().remove_child(self)
+		else:
+			printerr("remove_from_attachment: not inside tree!")
+	else:
+		printerr("remove_from_attachment: does not have entity parent!")
+		
+func attachment_points_pre_change() -> void:
+	emit_signal("attachment_points_pre_change")
+
+func attachment_points_post_change() -> void:
+	emit_signal("attachment_points_pre_change")
+		
+func get_entity_parent() -> Node:
+	return entity_parent
+		
 func set_entity_parent(p_entity_parent : Node) -> void:
 	# Same parent, no update needed
 	if p_entity_parent == entity_parent:
@@ -193,14 +239,13 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 	
 	# Save the global transform
 	var last_global_transform : Transform = Transform()
-	var simulation_logic_node : Node = get_simulation_logic_node()
 	
 	if simulation_logic_node:
 		last_global_transform = simulation_logic_node.get_global_transform()
 	
 	# Remove it from the tree and remove its original entity parent
 	if is_inside_tree():
-		get_parent().remove_child(self)
+		remove_from_attachment()
 	
 	# Make sure that the entity parent is null or a valid entity node
 	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
@@ -211,15 +256,11 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 			if network_identity_node:
 				network_identity_node.network_replication_manager.get_entity_root_node().add_child(self)
 		else:
-			p_entity_parent.add_child(self)
+			add_to_attachment()
 			
 		# Reload the previously saved global transform
 		if simulation_logic_node:
 			simulation_logic_node.set_global_transform(last_global_transform)
-		
-		# Now send the network update...
-		if network_identity_node:
-			network_identity_node.send_parent_entity_update()
 		
 func clear_entity_parent() -> void:
 	set_entity_parent(null)

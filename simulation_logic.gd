@@ -47,8 +47,11 @@ func _transform_changed() -> void:
 	pass
 	
 func cache_node(p_node_path : NodePath) -> Node:
-	var node = get_node_or_null(p_node_path)
+	var node : Node = get_node_or_null(p_node_path)
 	return node
+	
+func get_attachment_node(p_attachment_id : int) -> Node:
+	return get_entity_node()
 	
 ##############
 # Networking #
