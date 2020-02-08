@@ -4,6 +4,11 @@ tool
 
 const entity_manager_const = preload("entity_manager.gd")
 
+# When run ingame, ths flag is set when ready is called
+# to prevent _set and _get methods from calling their
+# expensive path validation functions
+var block_set_get : bool = false 
+
 """
 Parenting
 """
@@ -132,14 +137,14 @@ func set_sub_property(p_path : NodePath, p_property : String, p_value, p_sub_nod
 	return false
 	
 func _get(p_property : String):
-	if Engine.is_editor_hint():
+	if !block_set_get:
 		var variant = null
 		if is_subnode_property_valid():
 			variant = get_sub_property(simulation_logic_node_path, p_property, "simulation_logic_node")
 		return variant
 
 func _set(p_property : String, p_value) -> bool:
-	if Engine.is_editor_hint():
+	if !block_set_get:
 		var return_val : bool = false
 		if is_subnode_property_valid():
 			return_val = set_sub_property(simulation_logic_node_path, p_property, p_value, "simulation_logic_node")
@@ -296,6 +301,7 @@ func cache_nodes() -> void:
 	
 func _ready() -> void:
 	if !Engine.is_editor_hint():
+		block_set_get = true
 		entity_manager = get_node_or_null("/root/EntityManager")
 		if entity_manager:
 			add_to_group("Entities")

@@ -14,5 +14,4 @@ func cache_nodes():
 		entity_node = null
 
 func _ready() -> void:
-	if Engine.is_editor_hint() == false:
-		cache_nodes()
+	cache_nodes()
