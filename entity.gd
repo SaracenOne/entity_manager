@@ -313,3 +313,8 @@ func _ready() -> void:
 			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:
 				printerr("entity: tree_exiting could not be connected!")
 			
+func _threaded_instance_setup(p_instance_id : int, p_network_reader : Reference) -> void:
+	cache_nodes()
+	
+	network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)
+	simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
