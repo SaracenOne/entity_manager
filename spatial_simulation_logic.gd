@@ -1,6 +1,9 @@
 extends "simulation_logic.gd"
 tool
 
+func _network_transform_update(p_transform : Transform) -> void:
+	set_transform(p_transform, true)
+
 func get_global_origin() -> Vector3:
 	if entity_node and entity_node is Spatial:
 		return entity_node.global_transform.origin
@@ -52,5 +55,6 @@ func _entity_process(p_delta : float) -> void:
 func _entity_ready() -> void:
 	._entity_ready()
 	
-func _ready() -> void:
+func cache_nodes() -> void:
+	.cache_nodes()
 	entity_node = get_entity_node()
