@@ -57,4 +57,3 @@ func _entity_ready() -> void:
 	
 func cache_nodes() -> void:
 	.cache_nodes()
-	entity_node = get_entity_node()

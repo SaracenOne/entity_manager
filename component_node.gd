@@ -15,3 +15,6 @@ func cache_nodes():
 
 func _ready() -> void:
 	cache_nodes()
+
+func _threaded_instance_setup(p_instance_id : int, p_network_reader : Reference) -> void:
+	cache_nodes()
