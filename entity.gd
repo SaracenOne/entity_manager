@@ -64,6 +64,19 @@ var network_logic_node : Node = null
 func get_network_logic_node() -> Node:
 	return network_logic_node
 
+"""
+"""
+
+func request_to_become_master() -> void:
+	pass
+	#if NetworkManager.is_server():
+	#	set_network_master(NetworkManager.network_constants_const)
+	#else:
+	#	NetworkManager.network_replication_manager.
+
+func process_master_request(p_id : int) -> void:
+	set_network_master(p_id)
+
 func _entity_ready() -> void:
 	if !Engine.is_editor_hint():
 		if simulation_logic_node:
@@ -152,6 +165,9 @@ func _set(p_property : String, p_value) -> bool:
 		return return_val
 	else:
 		return false
+		
+func get_attachment_id(p_attachment_name : String) -> int:
+	return get_simulation_logic_node().get_attachment_id(p_attachment_name)
 		
 func get_attachment_node(p_attachment_id : int) -> Node:
 	return get_simulation_logic_node().get_attachment_node(p_attachment_id)
