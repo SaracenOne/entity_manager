@@ -248,7 +248,7 @@ func attachment_points_pre_change() -> void:
 	emit_signal("attachment_points_pre_change")
 
 func attachment_points_post_change() -> void:
-	emit_signal("attachment_points_pre_change")
+	emit_signal("attachment_points_post_change")
 		
 func get_entity_parent() -> Node:
 	return entity_parent
