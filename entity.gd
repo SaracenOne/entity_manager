@@ -18,6 +18,7 @@ enum {
 	ENTITY_PARENT_STATE_INVALID
 }
 
+signal entity_parent_changed()
 signal attachment_points_pre_change()
 signal attachment_points_post_change()
 
@@ -66,6 +67,12 @@ func get_network_logic_node() -> Node:
 
 """
 """
+
+func set_transform(p_transform : Transform) -> void:
+	.set_transform(p_transform)
+	
+func set_global_transform(p_transform : Transform) -> void:
+	.set_global_transform(p_transform)
 
 func request_to_become_master() -> void:
 	pass
@@ -207,8 +214,15 @@ func _has_entity_parent_internal() -> bool:
 			
 	return false
 	
-func _set_entity_parent_internal(p_entity_parent : Node) -> void:
-	if p_entity_parent == entity_parent:
+func _set_entity_parent_internal(p_node : Node) -> void:
+	var new_entity_parent : Node = null
+	
+	# Check if this node
+	if p_node.has_method("get_entity"):
+		new_entity_parent = p_node.call("get_entity")
+	
+	# If it has the same parent, don't change anything
+	if new_entity_parent == entity_parent:
 		return
 		
 	# Remove any previous parents
@@ -216,33 +230,40 @@ func _set_entity_parent_internal(p_entity_parent : Node) -> void:
 		entity_parent._remove_entity_child_internal(self)
 	
 	# Set the entity parent if its a valid entity
-	if p_entity_parent == null or (p_entity_parent and p_entity_parent.get_script() == get_script()):
-		entity_parent = p_entity_parent
+	if new_entity_parent == null or (new_entity_parent and new_entity_parent.get_script() == get_script()):
+		entity_parent = new_entity_parent
 	
 	# If the entity parent is not null, check if it is valid, and then add it to its list of children
 	if entity_parent != null:
 		entity_parent._add_entity_child_internal(self)
 		
-func add_to_attachment():
-	if entity_parent != null:
-		# Remove it from the tree and remove its original entity parent
-		if is_inside_tree():
-			printerr("add_to_attachment: already inside tree!")
-		else:
-			# Now add it back into the tree which will automatically reparent it
-			entity_parent.get_attachment_point(attachment_id).add_child(self)
+func _add_to_attachment(p_entity_parent : Spatial, p_attachment_id : int):
+	# Remove it from the tree and remove its original entity parent
+	if is_inside_tree():
+		printerr("add_to_attachment: already inside tree!")
 	else:
-		printerr("add_to_attachment: does not have entity parent!")
+		# Now add it back into the tree which will automatically reparent it
+		if p_entity_parent:
+			p_entity_parent.get_attachment_node(attachment_id).add_child(self)
+		else:
+			NetworkManager.network_replication_manager.get_entity_root_node().add_child(self)
 		
-func remove_from_attachment():
-	if entity_parent != null:
-		# Remove it from the tree and remove its original entity parent
-		if is_inside_tree():
-			get_parent().remove_child(self)
-		else:
-			printerr("remove_from_attachment: not inside tree!")
+		# Hacky workaround!
+		if is_connected("tree_exiting", entity_manager, "_entity_exiting") == false:
+			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:
+				printerr("entity: tree_exiting could not be connected!")
+		
+func _remove_from_attachment():
+	# Remove it from the tree and remove its original entity parent
+	if is_inside_tree():
+		# Hacky workaround!
+		if is_connected("tree_exiting", entity_manager, "_entity_exiting") == true:
+			if disconnect("tree_exiting", entity_manager, "_entity_exiting") != OK:
+				printerr("entity: tree_exiting could not be disconnected!")
+		
+		get_parent().remove_child(self)
 	else:
-		printerr("remove_from_attachment: does not have entity parent!")
+		printerr("remove_from_attachment: not inside tree!")
 		
 func attachment_points_pre_change() -> void:
 	emit_signal("attachment_points_pre_change")
@@ -253,10 +274,13 @@ func attachment_points_post_change() -> void:
 func get_entity_parent() -> Node:
 	return entity_parent
 		
-func set_entity_parent(p_entity_parent : Node) -> void:
+func set_entity_parent(p_entity_parent : Node, p_attachment_id : int) -> void:
 	# Same parent, no update needed
-	if p_entity_parent == entity_parent:
+	if p_entity_parent == entity_parent and p_attachment_id == attachment_id:
 		return
+		
+	# Set the new attachment id
+	attachment_id = p_attachment_id
 	
 	# Save the global transform
 	var last_global_transform : Transform = Transform()
@@ -266,25 +290,23 @@ func set_entity_parent(p_entity_parent : Node) -> void:
 	
 	# Remove it from the tree and remove its original entity parent
 	if is_inside_tree():
-		remove_from_attachment()
+		_remove_from_attachment()
 	
 	# Make sure that the entity parent is null or a valid entity node
 	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
 		var network_identity_node : Node = get_network_identity_node()
 		
 		# Now add it back into the tree which will automatically reparent it
-		if p_entity_parent == null:
-			if network_identity_node:
-				network_identity_node.network_replication_manager.get_entity_root_node().add_child(self)
-		else:
-			add_to_attachment()
+		_add_to_attachment(p_entity_parent, attachment_id)
 			
 		# Reload the previously saved global transform
 		if simulation_logic_node:
 			simulation_logic_node.set_global_transform(last_global_transform)
 		
+	emit_signal("entity_parent_changed")
+	
 func clear_entity_parent() -> void:
-	set_entity_parent(null)
+	set_entity_parent(null, 0)
 			
 func _enter_tree() -> void:
 	if !Engine.is_editor_hint():
@@ -314,6 +336,9 @@ func cache_nodes() -> void:
 	network_logic_node = get_node_or_null(network_logic_node_path)
 	if network_logic_node == self:
 		network_logic_node = null
+		
+func get_entity() -> Node:
+	return self
 	
 func _ready() -> void:
 	if !Engine.is_editor_hint():

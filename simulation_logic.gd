@@ -55,6 +55,9 @@ func get_attachment_id(p_attachment_string : String) -> int:
 func get_attachment_node(p_attachment_id : int) -> Node:
 	return get_entity_node()
 	
+func _entity_parent_changed() -> void:
+	pass
+	
 ##############
 # Networking #
 ##############
@@ -74,3 +77,7 @@ func _entity_process(p_delta : float) -> void:
 	
 func _entity_ready() -> void:
 	pass
+	
+func _ready() -> void:
+	if Engine.is_editor_hint() == false:
+		get_entity_node().connect("entity_parent_changed", self, "_entity_parent_changed")
