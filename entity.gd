@@ -18,6 +18,7 @@ enum {
 	ENTITY_PARENT_STATE_INVALID
 }
 
+signal entity_deletion()
 signal entity_parent_changed()
 signal attachment_points_pre_change()
 signal attachment_points_post_change()
@@ -218,7 +219,7 @@ func _set_entity_parent_internal(p_node : Node) -> void:
 	var new_entity_parent : Node = null
 	
 	# Check if this node
-	if p_node.has_method("get_entity"):
+	if p_node and p_node.has_method("get_entity"):
 		new_entity_parent = p_node.call("get_entity")
 	
 	# If it has the same parent, don't change anything
@@ -249,17 +250,16 @@ func _add_to_attachment(p_entity_parent : Spatial, p_attachment_id : int):
 			NetworkManager.network_replication_manager.get_entity_root_node().add_child(self)
 		
 		# Hacky workaround!
-		if is_connected("tree_exiting", entity_manager, "_entity_exiting") == false:
-			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:
+		if is_connected("tree_exiting", self, "_entity_deletion") == false:
+			if connect("tree_exiting", self, "_entity_deletion") != OK:
 				printerr("entity: tree_exiting could not be connected!")
 		
 func _remove_from_attachment():
 	# Remove it from the tree and remove its original entity parent
 	if is_inside_tree():
 		# Hacky workaround!
-		if is_connected("tree_exiting", entity_manager, "_entity_exiting") == true:
-			if disconnect("tree_exiting", entity_manager, "_entity_exiting") != OK:
-				printerr("entity: tree_exiting could not be disconnected!")
+		if is_connected("tree_exiting", self, "_entity_deletion") == true:
+			disconnect("tree_exiting", self, "_entity_deletion")
 		
 		get_parent().remove_child(self)
 	else:
@@ -340,6 +340,10 @@ func cache_nodes() -> void:
 func get_entity() -> Node:
 	return self
 	
+func _entity_deletion():
+	emit_signal("entity_deletion")
+	entity_manager._entity_exiting(self)
+	
 func _ready() -> void:
 	if !Engine.is_editor_hint():
 		block_set_get = true
@@ -348,10 +352,11 @@ func _ready() -> void:
 			add_to_group("Entities")
 			
 			cache_nodes()
+			network_identity_node.update_name()
 				
 			if connect("ready", entity_manager, "_entity_ready", [self]) != OK:
 				printerr("entity: ready could not be connected!")
-			if connect("tree_exiting", entity_manager, "_entity_exiting", [self]) != OK:
+			if connect("tree_exiting", self, "_entity_deletion") != OK:
 				printerr("entity: tree_exiting could not be connected!")
 			
 func _threaded_instance_setup(p_instance_id : int, p_network_reader : Reference) -> void:
