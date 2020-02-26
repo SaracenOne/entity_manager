@@ -187,8 +187,8 @@ func _add_entity_child_internal(p_entity_child : Node) -> void:
 			ErrorManager.error("_add_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
 			entity_children.push_back(p_entity_child)
-			p_entity_child.connect("attachment_points_pre_change", self, "remove_to_attachment")
-			p_entity_child.connect("attachment_points_post_change", self, "add_to_attachment")
+			#p_entity_child.connect("attachment_points_pre_change", self, "remove_to_attachment")
+			#p_entity_child.connect("attachment_points_post_change", self, "add_to_attachment")
 	else:
 		ErrorManager.error("_add_entity_child: attempted to add null entity child!")
 	
@@ -199,8 +199,8 @@ func _remove_entity_child_internal(p_entity_child : Node) -> void:
 			var index = entity_children.find(p_entity_child)
 			if index != -1:
 				entity_children.remove(index)
-				p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
-				p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
+				#p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
+				#p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
 			else:
 				ErrorManager.error("_remove_entity_child: does not have entity child {child_name}!".format({"child_name":child_name}))
 		else:
