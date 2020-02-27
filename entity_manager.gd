@@ -26,5 +26,14 @@ func _remove_entity(p_entity : Node) -> void:
 	var mutex_lock : mutex_lock_const = mutex_lock_const.new(mutex)
 	entity_pool.erase(p_entity)
 	
+func get_all_entities() -> Array:
+	var mutex_lock : mutex_lock_const = mutex_lock_const.new(mutex)
+	var return_array : Array = []
+	
+	for entity in entity_pool:
+		return_array.push_back(entity)
+		
+	return return_array
+	
 func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()

@@ -76,11 +76,7 @@ func set_global_transform(p_transform : Transform) -> void:
 	.set_global_transform(p_transform)
 
 func request_to_become_master() -> void:
-	pass
-	#if NetworkManager.is_server():
-	#	set_network_master(NetworkManager.network_constants_const)
-	#else:
-	#	NetworkManager.network_replication_manager.
+	NetworkManager.network_replication_manager.request_to_become_master(self, NetworkManager.get_current_peer_id())
 
 func process_master_request(p_id : int) -> void:
 	set_network_master(p_id)
@@ -198,6 +194,7 @@ func _remove_entity_child_internal(p_entity_child : Node) -> void:
 		if entity_children.has(p_entity_child):
 			var index = entity_children.find(p_entity_child)
 			if index != -1:
+				get_simulation_logic_node().entity_child_pre_remove(p_entity_child)
 				entity_children.remove(index)
 				#p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
 				#p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
@@ -343,6 +340,18 @@ func get_entity() -> Node:
 func _entity_deletion():
 	emit_signal("entity_deletion")
 	entity_manager._entity_exiting(self)
+	
+func can_request_master_from_peer(p_id : int) -> bool:
+	if get_simulation_logic_node():
+		return get_simulation_logic_node().can_request_master_from_peer(p_id)
+	else:
+		return false
+	
+func can_transfer_master_from_session_master(p_id : int) -> bool:
+	if get_simulation_logic_node():
+		return get_simulation_logic_node().can_transfer_master_from_session_master(p_id)
+	else:
+		return false
 	
 func _ready() -> void:
 	if !Engine.is_editor_hint():

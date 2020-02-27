@@ -77,6 +77,15 @@ func _entity_process(p_delta : float) -> void:
 	
 func _entity_ready() -> void:
 	pass
+
+func entity_child_pre_remove(p_entity_child : Node) -> void:
+	pass
+	
+func can_request_master_from_peer(p_id : int) -> bool:
+	return false
+	
+func can_transfer_master_from_session_master(p_id : int) -> bool:
+	return false
 	
 func _ready() -> void:
 	if Engine.is_editor_hint() == false:
