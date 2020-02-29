@@ -374,3 +374,6 @@ func _threaded_instance_setup(p_instance_id : int, p_network_reader : Reference)
 	simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)
+	
+func _threaded_instance_post_setup() -> void:
+	simulation_logic_node._threaded_instance_post_setup()

@@ -87,6 +87,9 @@ func can_request_master_from_peer(p_id : int) -> bool:
 func can_transfer_master_from_session_master(p_id : int) -> bool:
 	return false
 	
+func _threaded_instance_post_setup() -> void:
+	pass
+	
 func _ready() -> void:
 	if Engine.is_editor_hint() == false:
 		get_entity_node().connect("entity_parent_changed", self, "_entity_parent_changed")
