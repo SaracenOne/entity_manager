@@ -44,9 +44,6 @@ Simulation Logic Node
 """
 export(NodePath) var simulation_logic_node_path : NodePath = NodePath()
 var simulation_logic_node : Node = null
-	
-func get_simulation_logic_node() -> Node:
-	return simulation_logic_node
 
 """
 Network Identity Node
@@ -54,17 +51,11 @@ Network Identity Node
 export(NodePath) var network_identity_node_path : NodePath = NodePath()
 var network_identity_node : Node = null
 
-func get_network_identity_node() -> Node:
-	return network_identity_node
-
 """
 Network Logic Node
 """
 export(NodePath) var network_logic_node_path : NodePath = NodePath()
 var network_logic_node : Node = null
-
-func get_network_logic_node() -> Node:
-	return network_logic_node
 
 """
 """
@@ -171,10 +162,10 @@ func _set(p_property : String, p_value) -> bool:
 		return false
 		
 func get_attachment_id(p_attachment_name : String) -> int:
-	return get_simulation_logic_node().get_attachment_id(p_attachment_name)
+	return simulation_logic_node.get_attachment_id(p_attachment_name)
 		
 func get_attachment_node(p_attachment_id : int) -> Node:
-	return get_simulation_logic_node().get_attachment_node(p_attachment_id)
+	return simulation_logic_node.get_attachment_node(p_attachment_id)
 	
 func _add_entity_child_internal(p_entity_child : Node) -> void:
 	if p_entity_child:
@@ -194,7 +185,7 @@ func _remove_entity_child_internal(p_entity_child : Node) -> void:
 		if entity_children.has(p_entity_child):
 			var index = entity_children.find(p_entity_child)
 			if index != -1:
-				get_simulation_logic_node().entity_child_pre_remove(p_entity_child)
+				simulation_logic_node.entity_child_pre_remove(p_entity_child)
 				entity_children.remove(index)
 				#p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
 				#p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
@@ -291,8 +282,6 @@ func set_entity_parent(p_entity_parent : Node, p_attachment_id : int) -> void:
 	
 	# Make sure that the entity parent is null or a valid entity node
 	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
-		var network_identity_node : Node = get_network_identity_node()
-		
 		# Now add it back into the tree which will automatically reparent it
 		_add_to_attachment(p_entity_parent, attachment_id)
 			
@@ -342,14 +331,14 @@ func _entity_deletion():
 	entity_manager._entity_exiting(self)
 	
 func can_request_master_from_peer(p_id : int) -> bool:
-	if get_simulation_logic_node():
-		return get_simulation_logic_node().can_request_master_from_peer(p_id)
+	if simulation_logic_node:
+		return simulation_logic_node.can_request_master_from_peer(p_id)
 	else:
 		return false
 	
 func can_transfer_master_from_session_master(p_id : int) -> bool:
-	if get_simulation_logic_node():
-		return get_simulation_logic_node().can_transfer_master_from_session_master(p_id)
+	if simulation_logic_node:
+		return simulation_logic_node.can_transfer_master_from_session_master(p_id)
 	else:
 		return false
 	
