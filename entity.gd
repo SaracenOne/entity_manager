@@ -21,7 +21,7 @@ static func sub_property_path(p_property : String, p_sub_node_name : String) -> 
 			
 func _get_property_list() -> Array:
 	var properties : Array = []
-	var node : Node = get_node(simulation_logic_node_path)
+	var node : Node = get_node_or_null(simulation_logic_node_path)
 	if node and node != self:
 		if is_subnode_property_valid():
 			var node_property_list = node.get_property_list()
