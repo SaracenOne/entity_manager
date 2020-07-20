@@ -150,7 +150,7 @@ func _add_to_attachment(p_entity_parent : Spatial, p_attachment_id : int):
 			NetworkManager.network_replication_manager.get_entity_root_node().add_child(self)
 		
 		# Hacky workaround!
-		if is_connected("tree_exiting", self, "_entity_deletion") == false:
+		if !is_connected("tree_exiting", self, "_entity_deletion"):
 			if connect("tree_exiting", self, "_entity_deletion") != OK:
 				printerr("entity: tree_exiting could not be connected!")
 		
@@ -158,7 +158,7 @@ func _remove_from_attachment():
 	# Remove it from the tree and remove its original entity parent
 	if is_inside_tree():
 		# Hacky workaround!
-		if is_connected("tree_exiting", self, "_entity_deletion") == true:
+		if is_connected("tree_exiting", self, "_entity_deletion"):
 			disconnect("tree_exiting", self, "_entity_deletion")
 		
 		get_parent().remove_child(self)

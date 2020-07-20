@@ -36,11 +36,11 @@ func _get(p_property : String):
 				return get_update_fps()
 
 func _enter_tree() -> void:
-	if Engine.is_editor_hint() == false:
+	if !Engine.is_editor_hint():
 		add_to_group("entity_managed")
 		
 func _exit_tree() -> void:
-	if Engine.is_editor_hint() == false:
+	if !Engine.is_editor_hint():
 		remove_from_group("entity_managed")
 		
 func _transform_changed() -> void:
@@ -91,5 +91,5 @@ func _threaded_instance_post_setup() -> void:
 	pass
 	
 func _ready() -> void:
-	if Engine.is_editor_hint() == false:
+	if !Engine.is_editor_hint():
 		get_entity_node().connect("entity_parent_changed", self, "_entity_parent_changed")

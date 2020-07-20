@@ -3,7 +3,7 @@ class_name Entity
 tool
 
 func is_subnode_property_valid() -> bool:
-	if Engine.is_editor_hint() == false:
+	if !Engine.is_editor_hint():
 		return true
 	else:
 		return filename != "" or (is_inside_tree() and get_tree().edited_scene_root and get_tree().edited_scene_root == self)
@@ -28,7 +28,7 @@ func _get_property_list() -> Array:
 			for property in node_property_list:
 				if property.usage & PROPERTY_USAGE_EDITOR and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 					if property.name.substr(0, 1) != '_': 
-						property.name = "simulation_logic_node/" + property.name
+						property.name = "simulation_logic_node/%s" % property.name
 						properties.push_back(property)
 		
 	return properties
