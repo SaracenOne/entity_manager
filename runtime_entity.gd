@@ -31,37 +31,38 @@ var entity_manager: entity_manager_const = null
 """
 Transform Notification
 """
-export (NodePath) var transform_notification_node_path: NodePath = NodePath()
+var transform_notification_node_path: NodePath = NodePath()
 var transform_notification_node: Node = null
 
 """
 Simulation Logic Node
 """
-export (NodePath) var simulation_logic_node_path: NodePath = NodePath()
+var simulation_logic_node_path: NodePath = NodePath()
 var simulation_logic_node: Node = null
 
 """
 Network Identity Node
 """
-export (NodePath) var network_identity_node_path: NodePath = NodePath()
+var network_identity_node_path: NodePath = NodePath()
 var network_identity_node: Node = null
 
 """
 Network Logic Node
 """
-export (NodePath) var network_logic_node_path: NodePath = NodePath()
+var network_logic_node_path: NodePath = NodePath()
 var network_logic_node: Node = null
 
 """
 """
 
-
+"""
 func set_transform(p_transform: Transform) -> void:
 	.set_transform(p_transform)
 
 
 func set_global_transform(p_transform: Transform) -> void:
 	.set_global_transform(p_transform)
+"""
 
 
 func request_to_become_master() -> void:
@@ -294,6 +295,85 @@ func can_transfer_master_from_session_master(p_id: int) -> bool:
 		return simulation_logic_node.can_transfer_master_from_session_master(p_id)
 	else:
 		return false
+
+
+static func get_entity_properties(p_show_properties: bool) -> Array:
+	var usage: int
+	if p_show_properties:
+		usage = PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE
+	else:
+		usage = 0
+	
+	var entity_properties : Array = [
+		{
+			"name":"transform_notification_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
+		},
+		{
+			"name":"simulation_logic_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
+		},
+		{
+			"name":"network_identity_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
+		},
+		{
+			"name":"network_logic_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
+		}
+	]
+
+	return entity_properties
+	
+func is_root_entity() -> bool:
+	return false
+	
+
+func _get_property_list() -> Array:
+	var properties: Array = get_entity_properties(is_root_entity())
+	return properties
+
+
+func _get(p_property: String):
+	match p_property:
+		"transform_notification_node_path":
+			return transform_notification_node_path
+		"simulation_logic_node_path":
+			return simulation_logic_node_path
+		"network_identity_node_path":
+			return network_identity_node_path
+		"network_logic_node_path":
+			print("getting " + p_property)
+			return network_logic_node_path
+
+func _set(p_property: String, p_value) -> bool:
+	match p_property:
+		"transform_notification_node_path":
+			transform_notification_node_path = p_value
+			return true
+		"simulation_logic_node_path":
+			simulation_logic_node_path = p_value
+			return true
+		"network_identity_node_path":
+			network_identity_node_path = p_value
+			return true
+		"network_logic_node_path":
+			network_logic_node_path = p_value
+			return true
+			
+	return false
 
 
 func _ready() -> void:

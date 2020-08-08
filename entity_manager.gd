@@ -1,6 +1,8 @@
 extends Node
 tool
 
+const MAP_RESOURCE_IDENTIFIER = "mpr"
+
 const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 var mutex: Mutex = Mutex.new()
 
@@ -9,7 +11,47 @@ var entity_pool: Array = []
 signal entity_added(p_entity)
 signal entity_removed(p_entity)
 
+var get_map_id_for_entity_resource_funcref: FuncRef = FuncRef.new()
+var get_entity_resource_for_map_id_funcref: FuncRef = FuncRef.new()
 
+func assign_get_map_id_for_resource_function(p_node: Node, p_method : String) -> void:
+	get_map_id_for_entity_resource_funcref.set_instance(p_node)
+	get_map_id_for_entity_resource_funcref.set_function(p_method)
+	
+func assign_get_resource_for_map_id_function(p_node: Node, p_method : String) -> void:
+	get_entity_resource_for_map_id_funcref.set_instance(p_node)
+	get_entity_resource_for_map_id_funcref.set_function(p_method)
+
+func get_map_id_for_entity_resource(p_resource: Resource) -> int:
+	if get_map_id_for_entity_resource_funcref.is_valid():
+		return get_map_id_for_entity_resource_funcref.call_func(p_resource)
+		
+	return -1
+	
+func get_entity_resource_for_map_id(p_int: int) -> Resource:
+	if get_entity_resource_for_map_id_funcref.is_valid():
+		return get_entity_resource_for_map_id_funcref.call_func(p_int)
+		
+	return null
+	
+func get_path_for_entity_resource(p_resource: Resource) -> String:
+	var map_resource_id: int = get_map_id_for_entity_resource(p_resource)
+	print("map_resource_id %s" % str(map_resource_id))
+	if map_resource_id != -1:
+		return "%s://%s" % [MAP_RESOURCE_IDENTIFIER, str(map_resource_id)]
+	
+	return p_resource.resource_path
+	
+func get_entity_resource_for_path(p_path: String) -> Resource:
+	var map_resource_string_beginning: String = "%s://" % MAP_RESOURCE_IDENTIFIER
+	if p_path.begins_with(map_resource_string_beginning):
+		var string_diget: String = p_path.right(map_resource_string_beginning.length())
+		if string_diget.is_valid_integer():
+			var id: int = string_diget.to_int()
+			return get_entity_resource_for_map_id(id)
+			
+	return ResourceLoader.load(p_path)
+	
 func _entity_ready(p_entity: Node) -> void:
 	_add_entity(p_entity)
 	emit_signal("entity_added", p_entity)

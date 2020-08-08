@@ -2,6 +2,29 @@ extends "runtime_entity.gd"
 class_name Entity
 tool
 
+static func get_logic_node_properties(p_node : Node) -> Array:
+	var properties: Array = []
+	var node_property_list: Array = p_node.get_property_list()
+	for property in node_property_list:
+		if (
+			property["usage"] & PROPERTY_USAGE_EDITOR
+			and property["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE
+		):
+			if property["name"].substr(0, 1) != '_':
+				properties.push_back(property)
+				
+	return properties
+
+func is_root_entity() -> bool:
+	var networked_scenes: Array = []
+	
+	if ProjectSettings.has_setting("network/config/networked_scenes"):
+		networked_scenes = ProjectSettings.get_setting("network/config/networked_scenes")
+	
+	if get_owner() == null and networked_scenes.find(get_filename()) != -1:
+		return true
+	
+	return false
 
 func is_subnode_property_valid() -> bool:
 	if ! Engine.is_editor_hint():
@@ -34,16 +57,11 @@ func _get_property_list() -> Array:
 	var node: Node = get_node_or_null(simulation_logic_node_path)
 	if node and node != self:
 		if is_subnode_property_valid():
-			var node_property_list = node.get_property_list()
-			for property in node_property_list:
-				if (
-					property.usage & PROPERTY_USAGE_EDITOR
-					and property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE
-				):
-					if property.name.substr(0, 1) != '_':
-						property.name = "simulation_logic_node/%s" % property.name
-						properties.push_back(property)
-
+			var logic_node_properties : Array = get_logic_node_properties(node)
+			for property in logic_node_properties:
+				property["name"] = "simulation_logic_node/%s" % property["name"]
+				properties.push_back(property)
+	
 	return properties
 
 
