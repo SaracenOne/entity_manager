@@ -4,6 +4,16 @@ tool
 var editor_interface: EditorInterface = null
 
 
+func _init():
+	print("Initialising EntityManager plugin")
+
+
+func _notification(p_notification: int):
+	match p_notification:
+		NOTIFICATION_PREDELETE:
+			print("Destroying EntityManager plugin")
+
+
 func get_name() -> String:
 	return "EntityManager"
 
