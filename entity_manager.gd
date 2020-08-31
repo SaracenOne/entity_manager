@@ -35,6 +35,9 @@ func get_entity_resource_for_map_id(p_int: int) -> Resource:
 	return null
 	
 func get_path_for_entity_resource(p_resource: Resource) -> String:
+	if ! p_resource:
+		return ""
+	
 	var map_resource_id: int = get_map_id_for_entity_resource(p_resource)
 	print("map_resource_id %s" % str(map_resource_id))
 	if map_resource_id != -1:
