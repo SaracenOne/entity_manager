@@ -3,10 +3,13 @@ tool
 
 const MAP_RESOURCE_IDENTIFIER = "mpr"
 
+export(int) var last_process_msec: int = 0
+export(int) var last_physics_process_msec: int = 0
+
 const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 var mutex: Mutex = Mutex.new()
 
-var entity_pool: Array = []
+var entity_list: Array = []
 
 signal entity_added(p_entity)
 signal entity_removed(p_entity)
@@ -68,19 +71,19 @@ func _entity_exiting(p_entity: Node) -> void:
 
 func _add_entity(p_entity: Node) -> void:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(mutex)
-	entity_pool.append(p_entity)
+	entity_list.append(p_entity)
 
 
 func _remove_entity(p_entity: Node) -> void:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(mutex)
-	entity_pool.erase(p_entity)
+	entity_list.erase(p_entity)
 
 
 func get_all_entities() -> Array:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(mutex)
 	var return_array: Array = []
 
-	for entity in entity_pool:
+	for entity in entity_list:
 		return_array.push_back(entity)
 
 	return return_array
@@ -88,3 +91,23 @@ func get_all_entities() -> Array:
 
 func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()
+
+func _process(p_delta: float) -> void:
+	var msec_start:int = OS.get_ticks_msec()
+	for entity in entity_list:
+		entity._entity_process(p_delta)
+	last_process_msec = OS.get_ticks_msec() - msec_start
+	
+func _physics_process(p_delta: float) -> void:
+	var msec_start:int = OS.get_ticks_msec()
+	for entity in entity_list:
+		entity._entity_physics_process(p_delta)
+	last_physics_process_msec = OS.get_ticks_msec() - msec_start
+	
+func _ready() -> void:
+	if !Engine.is_editor_hint():
+		set_process(true)
+		set_physics_process(true)
+	else:
+		set_process(false)
+		set_physics_process(false)

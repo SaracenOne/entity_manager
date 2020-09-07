@@ -79,8 +79,38 @@ func _entity_ready() -> void:
 	if ! Engine.is_editor_hint():
 		if simulation_logic_node:
 			simulation_logic_node._entity_ready()
+		else:
+			printerr("Missing simulation logic node!")
+			
+		if network_identity_node:
+			network_identity_node._entity_ready()
+		else:
+			printerr("Missing network identity node")
+			
+		if network_logic_node:
+			network_logic_node._entity_ready()
+		else:
+			printerr("Missing network logic node")
+			
+		network_identity_node.update_name()
 
-
+func _entity_process(p_delta: float) -> void:
+	if network_logic_node:
+		network_logic_node._entity_process(p_delta)
+	else:
+		printerr("Missing network logic node")
+			
+	if simulation_logic_node:
+		simulation_logic_node._entity_process(p_delta)
+	else:
+		printerr("Missing simulation logic node!")
+		
+func _entity_physics_process(p_delta: float) -> void:
+	if simulation_logic_node:
+		simulation_logic_node._entity_physics_process(p_delta)
+	else:
+		printerr("Missing simulation logic node!")
+		
 func get_attachment_id(p_attachment_name: String) -> int:
 	return simulation_logic_node.get_attachment_id(p_attachment_name)
 
@@ -264,14 +294,20 @@ func cache_nodes() -> void:
 	simulation_logic_node = get_node_or_null(simulation_logic_node_path)
 	if simulation_logic_node == self:
 		simulation_logic_node = null
+	if simulation_logic_node:
+		simulation_logic_node.cache_nodes()
 
 	network_identity_node = get_node_or_null(network_identity_node_path)
 	if network_identity_node == self:
 		network_identity_node = null
+	if network_identity_node:
+		network_identity_node.cache_nodes()
 
 	network_logic_node = get_node_or_null(network_logic_node_path)
 	if network_logic_node == self:
 		network_logic_node = null
+	if network_logic_node:
+		network_logic_node.cache_nodes()
 
 
 func get_entity() -> Node:
@@ -377,23 +413,21 @@ func _set(p_property: String, p_value) -> bool:
 
 
 func _ready() -> void:
+	cache_nodes()
+	
 	if ! Engine.is_editor_hint():
 		entity_manager = get_node_or_null("/root/EntityManager")
 		if entity_manager:
 			add_to_group("Entities")
-
-			cache_nodes()
-			network_identity_node.update_name()
 
 			if connect("ready", entity_manager, "_entity_ready", [self]) != OK:
 				printerr("entity: ready could not be connected!")
 			if connect("tree_exiting", self, "_entity_deletion") != OK:
 				printerr("entity: tree_exiting could not be connected!")
 
-
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
 	cache_nodes()
-
+	
 	simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)

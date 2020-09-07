@@ -5,6 +5,19 @@ tool
 func _network_transform_update(p_transform: Transform) -> void:
 	set_transform(p_transform, true)
 
+func get_origin() -> Vector3:
+	if entity_node and entity_node is Spatial:
+		return entity_node.transform.origin
+	else:
+		printerr("Not connected to a Spatial node!")
+
+	return Vector3()
+
+func set_origin(p_origin: Vector3, _p_update_physics: bool = false) -> void:
+	if entity_node and entity_node is Spatial:
+		entity_node.transform.origin = p_origin
+	else:
+		printerr("Not connected to a Spatial node!")
 
 func get_global_origin() -> Vector3:
 	if entity_node and entity_node is Spatial:
@@ -56,15 +69,3 @@ func set_global_transform(p_global_transform: Transform, _p_update_physics: bool
 
 func _on_transform_changed() -> void:
 	pass
-
-
-func _entity_process(p_delta: float) -> void:
-	._entity_process(p_delta)
-
-
-func _entity_ready() -> void:
-	._entity_ready()
-
-
-func cache_nodes() -> void:
-	.cache_nodes()
