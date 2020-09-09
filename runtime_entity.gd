@@ -391,7 +391,6 @@ func _get(p_property: String):
 		"network_identity_node_path":
 			return network_identity_node_path
 		"network_logic_node_path":
-			print("getting " + p_property)
 			return network_logic_node_path
 
 func _set(p_property: String, p_value) -> bool:
