@@ -14,6 +14,9 @@ var entity_list: Array = []
 signal entity_added(p_entity)
 signal entity_removed(p_entity)
 
+signal process_complete(p_delta)
+signal physics_process_complete(p_delta)
+
 var get_map_id_for_entity_resource_funcref: FuncRef = FuncRef.new()
 var get_entity_resource_for_map_id_funcref: FuncRef = FuncRef.new()
 
@@ -98,13 +101,34 @@ func _process(p_delta: float) -> void:
 		entity._entity_process(p_delta)
 	last_process_msec = OS.get_ticks_msec() - msec_start
 	
+	emit_signal("process_complete", p_delta)
+	
 func _physics_process(p_delta: float) -> void:
 	var msec_start:int = OS.get_ticks_msec()
 	for entity in entity_list:
 		entity._entity_physics_process(p_delta)
 	last_physics_process_msec = OS.get_ticks_msec() - msec_start
 	
+	emit_signal("physics_process_complete", p_delta)
+	
+func apply_project_settings() -> void:
+	if Engine.is_editor_hint():
+		if ! ProjectSettings.has_setting("entities/config/process_priority"):
+			ProjectSettings.set_setting("entities/config/process_priority", 0)
+	
+			########
+			# Save #
+			########
+			if ProjectSettings.save() != OK:
+				printerr("Could not save project settings!")
+	
+func get_project_settings() -> void:
+	process_priority = ProjectSettings.get_setting("entities/config/process_priority")
+	
 func _ready() -> void:
+	apply_project_settings()
+	get_project_settings()
+	
 	if !Engine.is_editor_hint():
 		set_process(true)
 		set_physics_process(true)
