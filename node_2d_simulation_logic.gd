@@ -30,8 +30,8 @@ func _on_transform_changed() -> void:
 	pass
 
 
-func _entity_process(p_delta: float) -> void:
-	._entity_process(p_delta)
+func _entity_representation_process(p_delta: float) -> void:
+	._entity_representation_process(p_delta)
 
 
 func _entity_ready() -> void:

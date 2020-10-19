@@ -2,7 +2,18 @@ extends Node
 class_name RuntimeEntity
 tool
 
-const entity_manager_const = preload("entity_manager.gd")
+#const entity_manager_const = preload("entity_manager.gd")
+
+"""
+Dependency Graph
+"""
+
+var representation_process_ticks_msec: int = 0
+var physics_process_ticks_msec: int = 0
+
+var strong_dependency: Node = null
+var entity_ref: Reference = Reference.new()
+var nodes_cached: bool = false
 
 """
 Parenting
@@ -26,7 +37,7 @@ var attachment_id: int = 0
 """
 Entity Manager
 """
-var entity_manager: entity_manager_const = null
+var entity_manager: Node = null
 
 """
 Transform Notification
@@ -55,15 +66,6 @@ var network_logic_node: Node = null
 """
 """
 
-"""
-func set_transform(p_transform: Transform) -> void:
-	.set_transform(p_transform)
-
-
-func set_global_transform(p_transform: Transform) -> void:
-	.set_global_transform(p_transform)
-"""
-
 
 func request_to_become_master() -> void:
 	NetworkManager.network_replication_manager.request_to_become_master(
@@ -76,6 +78,8 @@ func process_master_request(p_id: int) -> void:
 
 
 func _entity_ready() -> void:
+	_entity_cache()
+	
 	if ! Engine.is_editor_hint():
 		if simulation_logic_node:
 			simulation_logic_node._entity_ready()
@@ -94,22 +98,30 @@ func _entity_ready() -> void:
 			
 		network_identity_node.update_name()
 
-func _entity_process(p_delta: float) -> void:
+func _entity_representation_process(p_delta: float) -> void:
+	var start_ticks: int = OS.get_ticks_msec()
+	
 	if network_logic_node:
-		network_logic_node._entity_process(p_delta)
+		network_logic_node._entity_representation_process(p_delta)
 	else:
 		printerr("Missing network logic node")
 			
 	if simulation_logic_node:
-		simulation_logic_node._entity_process(p_delta)
+		simulation_logic_node._entity_representation_process(p_delta)
 	else:
 		printerr("Missing simulation logic node!")
 		
+	representation_process_ticks_msec = OS.get_ticks_msec() - start_ticks
+		
 func _entity_physics_process(p_delta: float) -> void:
+	var start_ticks: int = OS.get_ticks_msec()
+	
 	if simulation_logic_node:
 		simulation_logic_node._entity_physics_process(p_delta)
 	else:
 		printerr("Missing simulation logic node!")
+		
+	physics_process_ticks_msec = OS.get_ticks_msec() - start_ticks
 		
 func get_attachment_id(p_attachment_name: String) -> int:
 	return simulation_logic_node.get_attachment_id(p_attachment_name)
@@ -294,24 +306,22 @@ func cache_nodes() -> void:
 	simulation_logic_node = get_node_or_null(simulation_logic_node_path)
 	if simulation_logic_node == self:
 		simulation_logic_node = null
-	if simulation_logic_node:
-		simulation_logic_node.cache_nodes()
 
 	network_identity_node = get_node_or_null(network_identity_node_path)
 	if network_identity_node == self:
 		network_identity_node = null
-	if network_identity_node:
-		network_identity_node.cache_nodes()
 
 	network_logic_node = get_node_or_null(network_logic_node_path)
 	if network_logic_node == self:
 		network_logic_node = null
-	if network_logic_node:
-		network_logic_node.cache_nodes()
 
 
 func get_entity() -> Node:
 	return self
+	
+	
+func get_entity_ref() -> Reference:
+	return entity_ref
 
 
 func _entity_deletion():
@@ -376,6 +386,10 @@ static func get_entity_properties(p_show_properties: bool) -> Array:
 func is_root_entity() -> bool:
 	return false
 	
+func _entity_cache() -> void:
+	if ! nodes_cached:
+		propagate_call("cache_nodes", [], true)
+		nodes_cached = true
 
 func _get_property_list() -> Array:
 	var properties: Array = get_entity_properties(is_root_entity())
@@ -412,8 +426,6 @@ func _set(p_property: String, p_value) -> bool:
 
 
 func _ready() -> void:
-	cache_nodes()
-	
 	if ! Engine.is_editor_hint():
 		entity_manager = get_node_or_null("/root/EntityManager")
 		if entity_manager:
@@ -424,8 +436,9 @@ func _ready() -> void:
 			if connect("tree_exiting", self, "_entity_deletion") != OK:
 				printerr("entity: tree_exiting could not be connected!")
 
+
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
-	cache_nodes()
+	_entity_cache()
 	
 	simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)

@@ -47,7 +47,7 @@ func is_entity_master() -> bool:
 			return false
 
 
-func _entity_process(_delta: float) -> void:
+func _entity_representation_process(_delta: float) -> void:
 	pass
 
 

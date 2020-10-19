@@ -9,6 +9,7 @@ var nodes_cached: bool = false
 func nodes_are_cached() -> bool:
 	return nodes_cached
 
+
 func get_entity_node() -> Node:
 	return entity_node
 
@@ -22,7 +23,8 @@ func cache_nodes() -> void:
 
 
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
-	call("cache_nodes")
+	pass
+
 
 func _threaded_instance_post_setup() -> void:
 	pass
