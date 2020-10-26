@@ -11,8 +11,21 @@ Dependency Graph
 var representation_process_ticks_msec: int = 0
 var physics_process_ticks_msec: int = 0
 
-var strong_dependency: Node = null
+const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
+
+var current_job: Reference = null
+var dependency_mutex: Mutex = Mutex.new()
+
+var strong_exclusive_dependencies: Array = []
+
+enum DependencyCommand {
+	ADD_STRONG_EXCLUSIVE_DEPENDENCY,
+	REMOVE_STRONG_EXCLUSIVE_DEPENDENCY
+}
+
+var pending_dependency_commands: Array = []
 var entity_ref: Reference = Reference.new()
+
 var nodes_cached: bool = false
 
 """
@@ -67,6 +80,35 @@ var network_logic_node: Node = null
 """
 
 
+func _create_strong_exclusive_dependency(p_entity: Node) -> void:
+	var mutex_lock: mutex_lock_const = mutex_lock_const.new(dependency_mutex)
+	pending_dependency_commands.push_back({"command":DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity})
+
+
+func _remove_strong_exclusive_dependency(p_entity: Node) -> void:
+	var mutex_lock: mutex_lock_const = mutex_lock_const.new(dependency_mutex)
+	pending_dependency_commands.push_back({"command":DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity})
+
+
+func _update_dependencies() -> void:
+	for pending_dependency in pending_dependency_commands:
+		var entity: Node = pending_dependency["entity"]
+		match pending_dependency["command"]:
+			DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY:
+				if strong_exclusive_dependencies.has(entity):
+					printerr("Already has exclusive strong dependency!")
+				else:
+					if EntityManager.check_if_dependency_is_cyclic(self, entity, true):
+						printerr("Error: tried to create a cyclic dependency!")
+					else:
+						strong_exclusive_dependencies.push_back(entity)
+			DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY:
+				if ! strong_exclusive_dependencies.has(entity):
+					printerr("Does not have exclusive strong dependency!")
+				else:
+					strong_exclusive_dependencies.erase(entity)
+	pending_dependency_commands.clear()
+
 func request_to_become_master() -> void:
 	NetworkManager.network_replication_manager.request_to_become_master(
 		self, NetworkManager.get_current_peer_id()
@@ -99,7 +141,7 @@ func _entity_ready() -> void:
 		network_identity_node.update_name()
 
 func _entity_representation_process(p_delta: float) -> void:
-	var start_ticks: int = OS.get_ticks_msec()
+	var start_ticks: int = OS.get_ticks_usec()
 	
 	if network_logic_node:
 		network_logic_node._entity_representation_process(p_delta)
@@ -111,17 +153,23 @@ func _entity_representation_process(p_delta: float) -> void:
 	else:
 		printerr("Missing simulation logic node!")
 		
-	representation_process_ticks_msec = OS.get_ticks_msec() - start_ticks
+	representation_process_ticks_msec = OS.get_ticks_usec() - start_ticks
 		
 func _entity_physics_process(p_delta: float) -> void:
-	var start_ticks: int = OS.get_ticks_msec()
+	var start_ticks: int = OS.get_ticks_usec()
+	
+	# Clear the job for next time the scheduler is run
+	current_job = null
 	
 	if simulation_logic_node:
 		simulation_logic_node._entity_physics_process(p_delta)
 	else:
 		printerr("Missing simulation logic node!")
 		
-	physics_process_ticks_msec = OS.get_ticks_msec() - start_ticks
+	physics_process_ticks_msec = OS.get_ticks_usec() - start_ticks
+	
+func _entity_physics_post_process(p_delta) -> void:
+	_update_dependencies()
 		
 func get_attachment_id(p_attachment_name: String) -> int:
 	return simulation_logic_node.get_attachment_id(p_attachment_name)
@@ -440,10 +488,14 @@ func _ready() -> void:
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
 	_entity_cache()
 	
-	simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
-	network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
-	network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)
+	if simulation_logic_node:
+		simulation_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
+	if network_logic_node:
+		network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
+	if network_identity_node:
+		network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)
 
 
 func _threaded_instance_post_setup() -> void:
-	simulation_logic_node._threaded_instance_post_setup()
+	if simulation_logic_node:
+		simulation_logic_node._threaded_instance_post_setup()
