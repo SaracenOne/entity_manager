@@ -110,8 +110,7 @@ static func _get_job_for_entity(p_entity: Node) -> EntityJob:
 			if strong_dependency_entity_job != entity_job:
 				strong_dependency_entity_job.combine(entity_job)
 				entity_job = strong_dependency_entity_job
-	
-	p_entity.current_job = entity_job
+		p_entity.current_job = entity_job
 	
 	return entity_job
 

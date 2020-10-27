@@ -16,6 +16,7 @@ const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 var current_job: Reference = null
 var dependency_mutex: Mutex = Mutex.new()
 
+# TODO: this should be a a Set/Dictionary
 var strong_exclusive_dependencies: Array = []
 
 enum DependencyCommand {
@@ -390,6 +391,18 @@ func can_transfer_master_from_session_master(p_id: int) -> bool:
 		return simulation_logic_node.can_transfer_master_from_session_master(p_id)
 	else:
 		return false
+
+
+func create_strong_dependency_for(p_entity_ref: Reference) -> bool:
+	return EntityManager.create_strong_dependency_for(p_entity_ref, get_entity_ref())
+
+
+func remove_strong_dependency_for(p_entity_ref: Reference) -> bool:
+	return EntityManager.remove_strong_dependency_for(p_entity_ref, get_entity_ref())
+
+
+func get_dependent_entity(p_entity_ref: Reference) -> Node:
+	return EntityManager.get_dependent_entity_for_dependency(get_entity_ref(), p_entity_ref)
 
 
 static func get_entity_properties(p_show_properties: bool) -> Array:
