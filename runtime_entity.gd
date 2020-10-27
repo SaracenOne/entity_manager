@@ -8,8 +8,8 @@ tool
 Dependency Graph
 """
 
-var representation_process_ticks_msec: int = 0
-var physics_process_ticks_msec: int = 0
+var representation_process_ticks_usec: int = 0
+var physics_process_ticks_usec: int = 0
 
 const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 
@@ -24,7 +24,8 @@ enum DependencyCommand {
 }
 
 var pending_dependency_commands: Array = []
-var entity_ref: Reference = Reference.new()
+
+var entity_ref: Reference = EntityManager.EntityRef.new(self)
 
 var nodes_cached: bool = false
 
@@ -153,7 +154,7 @@ func _entity_representation_process(p_delta: float) -> void:
 	else:
 		printerr("Missing simulation logic node!")
 		
-	representation_process_ticks_msec = OS.get_ticks_usec() - start_ticks
+	representation_process_ticks_usec = OS.get_ticks_usec() - start_ticks
 		
 func _entity_physics_process(p_delta: float) -> void:
 	var start_ticks: int = OS.get_ticks_usec()
@@ -166,7 +167,7 @@ func _entity_physics_process(p_delta: float) -> void:
 	else:
 		printerr("Missing simulation logic node!")
 		
-	physics_process_ticks_msec = OS.get_ticks_usec() - start_ticks
+	physics_process_ticks_usec = OS.get_ticks_usec() - start_ticks
 	
 func _entity_physics_post_process(p_delta) -> void:
 	_update_dependencies()

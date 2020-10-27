@@ -20,6 +20,13 @@ class EntityJob extends Reference:
 		if a.overall_time_usec > b.overall_time_usec:
 			return true
 		return false
+		
+class EntityRef extends Reference:
+	# Warning! Do not access this directly from another entity!
+	var _entity: RuntimeEntity = null
+	
+	func _init(p_entity) -> void:
+		_entity = p_entity
 
 var reparent_pending: Dictionary = {}
 var entity_reference_dictionary: Dictionary = {}
@@ -122,37 +129,33 @@ func _create_entity_update_jobs() -> Array:
 
 
 func get_dependent_entity_for_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> Entity:
-	var entity_dependency: Entity = entity_reference_dictionary.get(p_entity_dependency)
-	if ! entity_dependency:
+	if ! p_entity_dependency._entity:
 		printerr("Could not get entity for dependency!")
-	var entity_dependent: Entity = entity_reference_dictionary.get(p_entity_dependent)
-	if ! entity_dependent:
+	if ! p_entity_dependent._entity:
 		printerr("Could not get entity for dependent!")
 		
-	if _has_dependency_link(entity_dependent, entity_dependency):
-		return entity_dependent
+	if _has_dependency_link(p_entity_dependent._entity, p_entity_dependency._entity):
+		return p_entity_dependent._entity
 	else:
 		printerr("Does not have dependency!")
 		
 	return null
 
 
-func create_strong_dependency_for(p_entity_ref: Reference, p_base_entity: Entity) -> bool:
-	var entity: Entity = entity_reference_dictionary.get(p_entity_ref)
-	if entity == null:
+func create_strong_dependency_for(p_entity_ref: EntityRef, p_base_entity: EntityRef) -> bool:
+	if p_entity_ref._entity == null or p_base_entity._entity == null:
 		printerr("Could not get entity ref!")
-	if entity == p_base_entity:
+	if p_entity_ref._entity == p_base_entity._entity:
 		printerr("Attempted to create dependency on self!")
 		return false 
 
-	entity._create_strong_exclusive_dependency(p_base_entity)
+	p_entity_ref._entity._create_strong_exclusive_dependency(p_base_entity._entity)
 	return true
 
 
-func remove_strong_dependency_for(p_entity_ref: Reference, p_base_entity: Entity) -> bool:
-	var entity: Entity = entity_reference_dictionary.get(p_entity_ref)
-	if entity:
-		entity._remove_strong_exclusive_dependency(p_base_entity)
+func remove_strong_dependency_for(p_entity_ref: EntityRef, p_base_entity: EntityRef) -> bool:
+	if p_entity_ref._entity:
+		p_entity_ref._entity._remove_strong_exclusive_dependency(p_base_entity._entity)
 		return true
 	else:
 		printerr("Could not get entity ref")
