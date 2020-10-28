@@ -169,8 +169,17 @@ func _entity_physics_process(p_delta: float) -> void:
 		printerr("Missing simulation logic node!")
 		
 	physics_process_ticks_usec = OS.get_ticks_usec() - start_ticks
+
+func _entity_kinematic_integration_callback(p_delta: float) -> void:
+	if simulation_logic_node:
+		simulation_logic_node._entity_kinematic_integration_callback(p_delta)
+	else:
+		printerr("Missing simulation logic node!")
 	
 func _entity_physics_post_process(p_delta) -> void:
+	if simulation_logic_node:
+		simulation_logic_node._entity_physics_post_process(p_delta)
+	
 	_update_dependencies()
 		
 func get_attachment_id(p_attachment_name: String) -> int:
@@ -403,6 +412,14 @@ func remove_strong_dependency_for(p_entity_ref: Reference) -> bool:
 
 func get_dependent_entity(p_entity_ref: Reference) -> Node:
 	return EntityManager.get_dependent_entity_for_dependency(get_entity_ref(), p_entity_ref)
+
+
+func register_kinematic_integration_callback() -> void:
+	EntityManager.register_kinematic_integration_callback(self)
+
+
+func unregister_kinematic_integration_callback() -> void:
+	EntityManager.unregister_kinematic_integration_callback(self)
 
 
 static func get_entity_properties(p_show_properties: bool) -> Array:

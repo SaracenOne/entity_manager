@@ -30,6 +30,7 @@ class EntityRef extends Reference:
 
 var reparent_pending: Dictionary = {}
 var entity_reference_dictionary: Dictionary = {}
+var entity_kinematic_integration_callbacks: Array = []
 
 signal entity_added(p_entity)
 signal entity_removed(p_entity)
@@ -44,7 +45,8 @@ func _add_entity(p_entity: Node) -> void:
 
 func _remove_entity(p_entity: Node) -> void:
 	entity_reference_dictionary.erase(p_entity.get_entity_ref())
-
+	entity_kinematic_integration_callbacks.erase(p_entity)
+	
 
 func get_all_entities() -> Array:
 	var return_array: Array = []
@@ -54,6 +56,17 @@ func get_all_entities() -> Array:
 
 	return return_array
 
+func register_kinematic_integration_callback(p_entity: RuntimeEntity) -> void:
+	if ! entity_kinematic_integration_callbacks.has(p_entity):
+		entity_kinematic_integration_callbacks.push_back(p_entity)
+	else:
+		printerr("Attempted to add duplicate kinematic integration callback")
+
+func unregister_kinematic_integration_callback(p_entity: RuntimeEntity) -> void:
+	if entity_kinematic_integration_callbacks.has(p_entity):
+		entity_kinematic_integration_callbacks.erase(p_entity)
+	else:
+		printerr("Attempted to remove invalid kinematic integration callback")
 
 func _entity_ready(p_entity: Node) -> void:
 	_add_entity(p_entity)
@@ -70,7 +83,7 @@ func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()
 
 
-static func _check_for_strong_exclusive_dependency(p_base_entity: Entity, p_current_entity: Entity) -> bool:
+static func _check_for_strong_exclusive_dependency(p_base_entity: RuntimeEntity, p_current_entity: RuntimeEntity) -> bool:
 	if p_base_entity == p_current_entity:
 		return true
 	
@@ -81,7 +94,7 @@ static func _check_for_strong_exclusive_dependency(p_base_entity: Entity, p_curr
 	return false
 
 
-static func _has_dependency_link(p_dependent_entity: Entity, p_dependency_entity: Entity) -> bool:
+static func _has_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
 	if _check_for_strong_exclusive_dependency(p_dependency_entity, p_dependent_entity):
 		return true
 	else:
@@ -127,7 +140,7 @@ func _create_entity_update_jobs() -> Array:
 	return jobs
 
 
-func get_dependent_entity_for_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> Entity:
+func get_dependent_entity_for_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> RuntimeEntity:
 	if ! p_entity_dependency._entity:
 		printerr("Could not get entity for dependency!")
 	if ! p_entity_dependent._entity:
@@ -186,9 +199,14 @@ func _physics_process(p_delta: float) -> void:
 	
 	var entity_physics_process_usec_start:int = OS.get_ticks_usec()
 	for job in jobs:
+		if job.entities.size() > 1:
+			print("dd")
 		for entity in job.entities:
 			entity._entity_physics_process(p_delta)
 	last_physics_process_usec = OS.get_ticks_usec() - entity_physics_process_usec_start
+	
+	for entity in entity_kinematic_integration_callbacks:
+		entity._entity_kinematic_integration_callback(p_delta)
 	
 	var entity_post_physics_process_usec_start:int = OS.get_ticks_usec()
 	for entity in entity_reference_dictionary.values():
