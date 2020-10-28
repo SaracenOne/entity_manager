@@ -28,6 +28,7 @@ class EntityRef extends Reference:
 	func _init(p_entity) -> void:
 		_entity = p_entity
 
+
 var reparent_pending: Dictionary = {}
 var entity_reference_dictionary: Dictionary = {}
 var entity_kinematic_integration_callbacks: Array = []
@@ -81,24 +82,13 @@ func _entity_exiting(p_entity: Node) -> void:
 
 func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()
-
-
-static func _check_for_strong_exclusive_dependency(p_base_entity: RuntimeEntity, p_current_entity: RuntimeEntity) -> bool:
-	if p_base_entity == p_current_entity:
-		return true
-	
-	for strong_exclusive_dependency in p_current_entity.strong_exclusive_dependencies:
-		if _check_for_strong_exclusive_dependency(p_base_entity, strong_exclusive_dependency):
-			return true
 		
-	return false
-
-
-static func _has_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
-	if _check_for_strong_exclusive_dependency(p_dependency_entity, p_dependent_entity):
+		
+static func _has_immediate_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
+	if p_dependent_entity.strong_exclusive_dependencies.has(p_dependency_entity):
 		return true
-	else:
-		return false
+			
+	return false
 
 
 static func check_if_dependency_is_cyclic(p_root_entity: Node, p_current_enity: Node, p_is_root: bool) -> bool:
@@ -143,36 +133,71 @@ func _create_entity_update_jobs() -> Array:
 func get_dependent_entity_for_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> RuntimeEntity:
 	if ! p_entity_dependency._entity:
 		printerr("Could not get entity for dependency!")
+		return null
 	if ! p_entity_dependent._entity:
 		printerr("Could not get entity for dependent!")
+		return null
 		
-	if _has_dependency_link(p_entity_dependent._entity, p_entity_dependency._entity):
+	if _has_immediate_dependency_link(p_entity_dependent._entity, p_entity_dependency._entity):
 		return p_entity_dependent._entity
 	else:
 		printerr("Does not have dependency!")
 		
 	return null
-
-
-func create_strong_dependency_for(p_entity_ref: EntityRef, p_base_entity: EntityRef) -> bool:
-	if p_entity_ref._entity == null or p_base_entity._entity == null:
-		printerr("Could not get entity ref!")
-	if p_entity_ref._entity == p_base_entity._entity:
-		printerr("Attempted to create dependency on self!")
-		return false 
-
-	p_entity_ref._entity._create_strong_exclusive_dependency(p_base_entity._entity)
-	return true
-
-
-func remove_strong_dependency_for(p_entity_ref: EntityRef, p_base_entity: EntityRef) -> bool:
-	if p_entity_ref._entity:
-		p_entity_ref._entity._remove_strong_exclusive_dependency(p_base_entity._entity)
-		return true
-	else:
-		printerr("Could not get entity ref")
+	
+func check_bidirectional_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> bool:
+	if ! p_entity_dependency._entity or ! p_entity_dependent._entity:
 		return false
+	
+	if _has_immediate_dependency_link(p_entity_dependency._entity, p_entity_dependent._entity):
+		return true
+	if _has_immediate_dependency_link(p_entity_dependent._entity, p_entity_dependent._entity):
+		return true
+		
+	return false
+	
 
+class StrongExclusiveDependencyHandle extends Reference:
+	var _entity_ref: EntityRef = null
+	var _dependency: EntityRef = null
+	
+	func _notification(what):
+		if what == NOTIFICATION_PREDELETE:
+			if _entity_ref._entity and _dependency._entity:
+				_entity_ref._entity._remove_strong_exclusive_dependency(_dependency)
+	
+	func _init(p_entity_ref: EntityRef, p_dependency: EntityRef):
+		_entity_ref = p_entity_ref
+		_dependency = p_dependency
+		
+		_entity_ref._entity._create_strong_exclusive_dependency(_dependency)
+
+
+func create_strong_dependency(p_dependent: EntityRef, p_dependency: EntityRef) -> StrongExclusiveDependencyHandle:
+	var dependent_entity: Node = p_dependent._entity
+	var dependency_entity: Node = p_dependency._entity
+	
+	if ! dependent_entity or ! dependency_entity:
+		printerr("Could not get entity ref!")
+		return null
+	if dependent_entity == dependency_entity:
+		printerr("Attempted to create dependency on self!")
+		return null 
+
+	return StrongExclusiveDependencyHandle.new(p_dependent, p_dependency)
+
+
+func get_entity_type_safe(p_target_entity: EntityRef) -> String:
+	if p_target_entity._entity:
+		return p_target_entity._entity.get_entity_type()
+	else:
+		return ""
+
+func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef, p_message: String, p_message_args: Array):
+	if check_bidirectional_dependency(p_source_entity, p_target_entity):
+		p_target_entity.entity.receive_message(p_message, p_message_args)
+	else:
+		printerr("Could not send message to target entity! No dependency link!")
 
 func _process_reparenting() -> void:
 	for entity in reparent_pending.keys():
@@ -199,8 +224,6 @@ func _physics_process(p_delta: float) -> void:
 	
 	var entity_physics_process_usec_start:int = OS.get_ticks_usec()
 	for job in jobs:
-		if job.entities.size() > 1:
-			print("dd")
 		for entity in job.entities:
 			entity._entity_physics_process(p_delta)
 	last_physics_process_usec = OS.get_ticks_usec() - entity_physics_process_usec_start

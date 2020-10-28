@@ -17,7 +17,8 @@ var current_job: Reference = null
 var dependency_mutex: Mutex = Mutex.new()
 
 # TODO: this should be a a Set/Dictionary
-var strong_exclusive_dependencies: Array = []
+var strong_exclusive_dependencies: Dictionary = {}
+var strong_exclusive_dependents: Array = []
 
 enum DependencyCommand {
 	ADD_STRONG_EXCLUSIVE_DEPENDENCY,
@@ -39,6 +40,7 @@ enum {
 	ENTITY_PARENT_STATE_INVALID,
 }
 
+signal entity_message(p_message, p_args)
 signal entity_deletion
 signal entity_parent_changed
 signal attachment_points_pre_change
@@ -81,34 +83,38 @@ var network_logic_node: Node = null
 """
 """
 
-
-func _create_strong_exclusive_dependency(p_entity: Node) -> void:
+func _create_strong_exclusive_dependency(p_entity_ref: Reference) -> void:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(dependency_mutex)
-	pending_dependency_commands.push_back({"command":DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity})
+	pending_dependency_commands.push_back({"command":DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity_ref})
 
 
-func _remove_strong_exclusive_dependency(p_entity: Node) -> void:
+func _remove_strong_exclusive_dependency(p_entity_ref: Reference) -> void:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(dependency_mutex)
-	pending_dependency_commands.push_back({"command":DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity})
+	pending_dependency_commands.push_back({"command":DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity_ref})
 
 
 func _update_dependencies() -> void:
 	for pending_dependency in pending_dependency_commands:
-		var entity: Node = pending_dependency["entity"]
-		match pending_dependency["command"]:
-			DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY:
-				if strong_exclusive_dependencies.has(entity):
-					printerr("Already has exclusive strong dependency!")
-				else:
-					if EntityManager.check_if_dependency_is_cyclic(self, entity, true):
-						printerr("Error: tried to create a cyclic dependency!")
+		var entity: Node = pending_dependency["entity"]._entity
+		if entity:
+			match pending_dependency["command"]:
+				DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY:
+					if strong_exclusive_dependencies.has(entity):
+						strong_exclusive_dependencies[entity] += 1
 					else:
-						strong_exclusive_dependencies.push_back(entity)
-			DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY:
-				if ! strong_exclusive_dependencies.has(entity):
-					printerr("Does not have exclusive strong dependency!")
-				else:
-					strong_exclusive_dependencies.erase(entity)
+						if EntityManager.check_if_dependency_is_cyclic(self, entity, true):
+							printerr("Error: tried to create a cyclic dependency!")
+						else:
+							strong_exclusive_dependencies[entity] = 1
+							entity.strong_exclusive_dependents.push_back(self)
+				DependencyCommand.REMOVE_STRONG_EXCLUSIVE_DEPENDENCY:
+					if ! strong_exclusive_dependencies.has(entity):
+						printerr("Does not have exclusive strong dependency!")
+					else:
+						strong_exclusive_dependencies[entity] -= 1
+						if strong_exclusive_dependencies[entity] <= 0:
+							strong_exclusive_dependencies.erase(entity)
+							entity.strong_exclusive_dependents.erase(self)
 	pending_dependency_commands.clear()
 
 func request_to_become_master() -> void:
@@ -402,12 +408,12 @@ func can_transfer_master_from_session_master(p_id: int) -> bool:
 		return false
 
 
-func create_strong_dependency_for(p_entity_ref: Reference) -> bool:
-	return EntityManager.create_strong_dependency_for(p_entity_ref, get_entity_ref())
+func create_strong_dependency_for(p_entity_ref: Reference) -> Reference:
+	return EntityManager.create_strong_dependency(p_entity_ref, get_entity_ref())
 
 
-func remove_strong_dependency_for(p_entity_ref: Reference) -> bool:
-	return EntityManager.remove_strong_dependency_for(p_entity_ref, get_entity_ref())
+func create_strong_dependency_to(p_entity_ref: Reference) -> Reference:
+	return EntityManager.create_strong_dependency(get_entity_ref(), p_entity_ref)
 
 
 func get_dependent_entity(p_entity_ref: Reference) -> Node:
@@ -421,6 +427,15 @@ func register_kinematic_integration_callback() -> void:
 func unregister_kinematic_integration_callback() -> void:
 	EntityManager.unregister_kinematic_integration_callback(self)
 
+
+func get_entity_type() -> String:
+	if simulation_logic_node:
+		return simulation_logic_node._entity_type
+	else:
+		return "Unknown Entity Type"
+		
+func _receive_message(p_message: String, p_args: Array) -> void:
+	emit_signal("EntityMessage", p_message, p_args)
 
 static func get_entity_properties(p_show_properties: bool) -> Array:
 	var usage: int
@@ -502,7 +517,12 @@ func _set(p_property: String, p_value) -> bool:
 			return true
 			
 	return false
-
+	
+func _notification(what):
+	if what == NOTIFICATION_PREDELETE:
+		entity_ref._entity = null
+		for dependent in strong_exclusive_dependents:
+			dependent.strong_exclusive_dependencies.erase(self)
 
 func _ready() -> void:
 	if ! Engine.is_editor_hint():

@@ -2,6 +2,9 @@ extends "component_node.gd"
 class_name SimulationLogic
 tool
 
+# Static value, do not edit at runtime
+export(String) var _entity_type: String = ""
+
 func _enter_tree() -> void:
 	if ! Engine.is_editor_hint():
 		add_to_group("entity_managed")

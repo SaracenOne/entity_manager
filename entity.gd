@@ -55,13 +55,14 @@ static func sub_property_path(p_property: String, p_sub_node_name: String) -> St
 func _get_property_list() -> Array:
 	if Engine.is_editor_hint():
 		var properties: Array = []
-		var node: Node = get_node_or_null(simulation_logic_node_path)
-		if node and node != self:
-			if is_subnode_property_valid():
-				var logic_node_properties : Array = get_logic_node_properties(node)
-				for property in logic_node_properties:
-					property["name"] = "simulation_logic_node/%s" % property["name"]
-					properties.push_back(property)
+		if simulation_logic_node_path:
+			var node: Node = get_node_or_null(simulation_logic_node_path)
+			if node and node != self:
+				if is_subnode_property_valid():
+					var logic_node_properties : Array = get_logic_node_properties(node)
+					for property in logic_node_properties:
+						property["name"] = "simulation_logic_node/%s" % property["name"]
+						properties.push_back(property)
 		
 		return properties
 	else:
@@ -109,7 +110,7 @@ func set_sub_property(p_path: NodePath, p_property: String, p_value, p_sub_node_
 func _get(p_property: String):
 	if Engine.is_editor_hint():
 		var variant = null
-		if is_subnode_property_valid():
+		if simulation_logic_node_path and is_subnode_property_valid():
 			variant = get_sub_property(simulation_logic_node_path, p_property, "simulation_logic_node")
 		return variant
 	else:
@@ -119,7 +120,7 @@ func _get(p_property: String):
 func _set(p_property: String, p_value) -> bool:
 	if Engine.is_editor_hint():
 		var return_val: bool = false
-		if is_subnode_property_valid():
+		if simulation_logic_node_path and is_subnode_property_valid():
 			return_val = set_sub_property(
 				simulation_logic_node_path, p_property, p_value, "simulation_logic_node"
 			)
