@@ -434,8 +434,11 @@ func get_entity_type() -> String:
 	else:
 		return "Unknown Entity Type"
 		
-func _receive_message(p_message: String, p_args: Array) -> void:
-	emit_signal("EntityMessage", p_message, p_args)
+func send_entity_message(p_target_entity: Reference, p_message: String, p_message_args: Array) -> void:
+	EntityManager.send_entity_message(get_entity_ref(), p_target_entity, p_message, p_message_args)
+		
+func _receive_entity_message(p_message: String, p_args: Array) -> void:
+	emit_signal("entity_message", p_message, p_args)
 
 static func get_entity_properties(p_show_properties: bool) -> Array:
 	var usage: int

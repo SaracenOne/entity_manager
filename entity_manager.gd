@@ -151,7 +151,7 @@ func check_bidirectional_dependency(p_entity_dependency: Reference, p_entity_dep
 	
 	if _has_immediate_dependency_link(p_entity_dependency._entity, p_entity_dependent._entity):
 		return true
-	if _has_immediate_dependency_link(p_entity_dependent._entity, p_entity_dependent._entity):
+	if _has_immediate_dependency_link(p_entity_dependent._entity, p_entity_dependency._entity):
 		return true
 		
 	return false
@@ -193,9 +193,9 @@ func get_entity_type_safe(p_target_entity: EntityRef) -> String:
 	else:
 		return ""
 
-func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef, p_message: String, p_message_args: Array):
+func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef, p_message: String, p_message_args: Array) -> void:
 	if check_bidirectional_dependency(p_source_entity, p_target_entity):
-		p_target_entity.entity.receive_message(p_message, p_message_args)
+		p_target_entity._entity._receive_entity_message(p_message, p_message_args)
 	else:
 		printerr("Could not send message to target entity! No dependency link!")
 
