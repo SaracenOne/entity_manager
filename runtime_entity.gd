@@ -27,7 +27,7 @@ enum DependencyCommand {
 
 var pending_dependency_commands: Array = []
 
-var entity_ref: Reference = EntityRef.new(self)
+var entity_ref: EntityRef = EntityRef.new(self)
 
 var nodes_cached: bool = false
 
