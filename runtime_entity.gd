@@ -27,7 +27,7 @@ enum DependencyCommand {
 
 var pending_dependency_commands: Array = []
 
-var entity_ref: Reference = EntityManager.EntityRef.new(self)
+var entity_ref: Reference = EntityRef.new(self)
 
 var nodes_cached: bool = false
 
@@ -115,6 +115,7 @@ func _update_dependencies() -> void:
 							entity.strong_exclusive_dependents.erase(self)
 	pending_dependency_commands.clear()
 
+
 func request_to_become_master() -> void:
 	NetworkManager.network_replication_manager.request_to_become_master(
 		self, NetworkManager.get_current_peer_id()
@@ -146,6 +147,7 @@ func _entity_ready() -> void:
 			
 		network_identity_node.update_name()
 
+
 func _entity_representation_process(p_delta: float) -> void:
 	var start_ticks: int = OS.get_ticks_usec()
 	
@@ -160,10 +162,12 @@ func _entity_representation_process(p_delta: float) -> void:
 		printerr("Missing simulation logic node!")
 		
 	representation_process_ticks_usec = OS.get_ticks_usec() - start_ticks
-		
+
+
 func _entity_physics_pre_process(p_delta) -> void:
 	_update_dependencies()
-		
+
+
 func _entity_physics_process(p_delta: float) -> void:
 	var start_ticks: int = OS.get_ticks_usec()
 	
@@ -177,16 +181,19 @@ func _entity_physics_process(p_delta: float) -> void:
 		
 	physics_process_ticks_usec = OS.get_ticks_usec() - start_ticks
 
+
 func _entity_kinematic_integration_callback(p_delta: float) -> void:
 	if simulation_logic_node:
 		simulation_logic_node._entity_kinematic_integration_callback(p_delta)
 	else:
 		printerr("Missing simulation logic node!")
-	
+
+
 func _entity_physics_post_process(p_delta) -> void:
 	if simulation_logic_node:
 		simulation_logic_node._entity_physics_post_process(p_delta)
-		
+
+
 func get_attachment_id(p_attachment_name: String) -> int:
 	return simulation_logic_node.get_attachment_id(p_attachment_name)
 
@@ -298,8 +305,6 @@ func _remove_from_attachment():
 		printerr("remove_from_attachment: not inside tree!")
 
 
-
-
 func get_entity_parent() -> Node:
 	return entity_parent
 
@@ -378,7 +383,7 @@ func get_entity_ref() -> Reference:
 	return entity_ref
 
 
-func _entity_deletion():
+func _entity_deletion() -> void:
 	emit_signal("entity_deletion")
 	entity_manager._entity_exiting(self)
 
@@ -397,11 +402,11 @@ func can_transfer_master_from_session_master(p_id: int) -> bool:
 		return false
 
 
-func create_strong_dependency_for(p_entity_ref: Reference) -> Reference:
+func create_strong_exclusive_dependency_for(p_entity_ref: EntityRef) -> StrongExclusiveEntityDependencyHandle:
 	return EntityManager.create_strong_dependency(p_entity_ref, get_entity_ref())
 
 
-func create_strong_dependency_to(p_entity_ref: Reference) -> Reference:
+func create_strong_exclusive_dependency_to(p_entity_ref: EntityRef) -> StrongExclusiveEntityDependencyHandle:
 	return EntityManager.create_strong_dependency(get_entity_ref(), p_entity_ref)
 
 
@@ -515,7 +520,7 @@ func _set(p_property: String, p_value) -> bool:
 			
 	return false
 	
-func _notification(what):
+func _notification(what) -> void:
 	if what == NOTIFICATION_PREDELETE:
 		entity_ref._entity = null
 		for dependent in strong_exclusive_dependents:

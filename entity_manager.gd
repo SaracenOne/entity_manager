@@ -21,13 +21,6 @@ class EntityJob extends Reference:
 		if a.overall_time_usec > b.overall_time_usec:
 			return true
 		return false
-		
-class EntityRef extends Reference:
-	# Warning! Do not access this directly from another entity!
-	var _entity: RuntimeEntity = null
-	
-	func _init(p_entity) -> void:
-		_entity = p_entity
 
 
 var reparent_pending: Dictionary = {}
@@ -48,14 +41,14 @@ func _add_entity(p_entity: Node) -> void:
 func _remove_entity(p_entity: Node) -> void:
 	entity_reference_dictionary.erase(p_entity.get_entity_ref())
 	entity_kinematic_integration_callbacks.erase(p_entity)
-	
+
 
 func get_all_entities() -> Array:
 	var return_array: Array = []
-
+	
 	for entity in entity_reference_dictionary.values():
 		return_array.push_back(entity)
-
+		
 	return return_array
 
 
@@ -86,7 +79,6 @@ func _entity_exiting(p_entity: Node) -> void:
 
 func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()
-		
 
 
 static func _has_immediate_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
@@ -161,25 +153,9 @@ func check_bidirectional_dependency(p_entity_dependency: Reference, p_entity_dep
 		return true
 		
 	return false
-	
-
-class StrongExclusiveDependencyHandle extends Reference:
-	var _entity_ref: EntityRef = null
-	var _dependency: EntityRef = null
-	
-	func _notification(what):
-		if what == NOTIFICATION_PREDELETE:
-			if _entity_ref._entity and _dependency._entity:
-				_entity_ref._entity._remove_strong_exclusive_dependency(_dependency)
-	
-	func _init(p_entity_ref: EntityRef, p_dependency: EntityRef):
-		_entity_ref = p_entity_ref
-		_dependency = p_dependency
-		
-		_entity_ref._entity._create_strong_exclusive_dependency(_dependency)
 
 
-func create_strong_dependency(p_dependent: EntityRef, p_dependency: EntityRef) -> StrongExclusiveDependencyHandle:
+func create_strong_dependency(p_dependent: EntityRef, p_dependency: EntityRef) -> StrongExclusiveEntityDependencyHandle:
 	var dependent_entity: Node = p_dependent._entity
 	var dependency_entity: Node = p_dependency._entity
 	
@@ -189,8 +165,8 @@ func create_strong_dependency(p_dependent: EntityRef, p_dependency: EntityRef) -
 	if dependent_entity == dependency_entity:
 		printerr("Attempted to create dependency on self!")
 		return null 
-
-	return StrongExclusiveDependencyHandle.new(p_dependent, p_dependency)
+		
+	return StrongExclusiveEntityDependencyHandle.new(p_dependent, p_dependency)
 
 
 func get_entity_type_safe(p_target_entity: EntityRef) -> String:
@@ -223,8 +199,8 @@ func _process(p_delta: float) -> void:
 	last_representation_process_usec = OS.get_ticks_usec() - all_entities_representation_process_usec_start
 	
 	emit_signal("process_complete", p_delta)
-	
-	
+
+
 func _physics_process(p_delta: float) -> void:
 	var scheduler_usec_start:int = OS.get_ticks_usec()
 	var jobs: Array = _create_entity_update_jobs()
@@ -250,8 +226,8 @@ func _physics_process(p_delta: float) -> void:
 	last_physics_post_process_usec = OS.get_ticks_usec() - entity_post_physics_process_usec_start
 	
 	emit_signal("physics_process_complete", p_delta)
-	
-	
+
+
 func apply_project_settings() -> void:
 	if Engine.is_editor_hint():
 		if ! ProjectSettings.has_setting("entities/config/process_priority"):
@@ -262,12 +238,12 @@ func apply_project_settings() -> void:
 			########
 			if ProjectSettings.save() != OK:
 				printerr("Could not save project settings!")
-	
-	
+
+
 func get_project_settings() -> void:
 	process_priority = ProjectSettings.get_setting("entities/config/process_priority")
-	
-	
+
+
 func _ready() -> void:
 	apply_project_settings()
 	get_project_settings()
