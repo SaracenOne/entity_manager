@@ -4,6 +4,7 @@ tool
 export(int) var last_representation_process_usec: int = 0
 export(int) var last_physics_process_usec: int = 0
 export(int) var last_physics_post_process_usec: int = 0
+export(int) var last_physics_pre_process_usec: int = 0
 
 class EntityJob extends Reference:
 	var entities: Array = []
@@ -57,17 +58,20 @@ func get_all_entities() -> Array:
 
 	return return_array
 
+
 func register_kinematic_integration_callback(p_entity: RuntimeEntity) -> void:
 	if ! entity_kinematic_integration_callbacks.has(p_entity):
 		entity_kinematic_integration_callbacks.push_back(p_entity)
 	else:
 		printerr("Attempted to add duplicate kinematic integration callback")
 
+
 func unregister_kinematic_integration_callback(p_entity: RuntimeEntity) -> void:
 	if entity_kinematic_integration_callbacks.has(p_entity):
 		entity_kinematic_integration_callbacks.erase(p_entity)
 	else:
 		printerr("Attempted to remove invalid kinematic integration callback")
+
 
 func _entity_ready(p_entity: Node) -> void:
 	_add_entity(p_entity)
@@ -83,7 +87,8 @@ func _entity_exiting(p_entity: Node) -> void:
 func get_entity_root_node() -> Node:
 	return NetworkManager.get_entity_root_node()
 		
-		
+
+
 static func _has_immediate_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
 	if p_dependent_entity.strong_exclusive_dependencies.has(p_dependency_entity):
 		return true
@@ -144,7 +149,8 @@ func get_dependent_entity_for_dependency(p_entity_dependency: Reference, p_entit
 		printerr("Does not have dependency!")
 		
 	return null
-	
+
+
 func check_bidirectional_dependency(p_entity_dependency: Reference, p_entity_dependent: Reference) -> bool:
 	if ! p_entity_dependency._entity or ! p_entity_dependent._entity:
 		return false
@@ -193,11 +199,13 @@ func get_entity_type_safe(p_target_entity: EntityRef) -> String:
 	else:
 		return ""
 
+
 func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef, p_message: String, p_message_args: Array) -> void:
 	if check_bidirectional_dependency(p_source_entity, p_target_entity):
 		p_target_entity._entity._receive_entity_message(p_message, p_message_args)
 	else:
 		printerr("Could not send message to target entity! No dependency link!")
+
 
 func _process_reparenting() -> void:
 	for entity in reparent_pending.keys():
@@ -221,6 +229,11 @@ func _physics_process(p_delta: float) -> void:
 	var scheduler_usec_start:int = OS.get_ticks_usec()
 	var jobs: Array = _create_entity_update_jobs()
 	var scheduler_overall_time:int = OS.get_ticks_usec() - scheduler_usec_start
+	
+	var entity_pre_physics_process_usec_start:int = OS.get_ticks_usec()
+	for entity in entity_reference_dictionary.values():
+		entity._entity_physics_pre_process(p_delta)
+	last_physics_pre_process_usec = OS.get_ticks_usec() - entity_pre_physics_process_usec_start
 	
 	var entity_physics_process_usec_start:int = OS.get_ticks_usec()
 	for job in jobs:

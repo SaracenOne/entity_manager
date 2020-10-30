@@ -43,8 +43,6 @@ enum {
 signal entity_message(p_message, p_args)
 signal entity_deletion
 signal entity_parent_changed
-signal attachment_points_pre_change
-signal attachment_points_post_change
 
 var entity_parent_state: int = ENTITY_PARENT_STATE_OK
 var entity_parent: Node = null
@@ -163,6 +161,9 @@ func _entity_representation_process(p_delta: float) -> void:
 		
 	representation_process_ticks_usec = OS.get_ticks_usec() - start_ticks
 		
+func _entity_physics_pre_process(p_delta) -> void:
+	_update_dependencies()
+		
 func _entity_physics_process(p_delta: float) -> void:
 	var start_ticks: int = OS.get_ticks_usec()
 	
@@ -185,8 +186,6 @@ func _entity_kinematic_integration_callback(p_delta: float) -> void:
 func _entity_physics_post_process(p_delta) -> void:
 	if simulation_logic_node:
 		simulation_logic_node._entity_physics_post_process(p_delta)
-	
-	_update_dependencies()
 		
 func get_attachment_id(p_attachment_name: String) -> int:
 	return simulation_logic_node.get_attachment_id(p_attachment_name)
@@ -207,8 +206,6 @@ func _add_entity_child_internal(p_entity_child: Node) -> void:
 			)
 		else:
 			entity_children.push_back(p_entity_child)
-			#p_entity_child.connect("attachment_points_pre_change", self, "remove_to_attachment")
-			#p_entity_child.connect("attachment_points_post_change", self, "add_to_attachment")
 	else:
 		ErrorManager.error("_add_entity_child: attempted to add null entity child!")
 
@@ -221,8 +218,6 @@ func _remove_entity_child_internal(p_entity_child: Node) -> void:
 			if index != -1:
 				simulation_logic_node.entity_child_pre_remove(p_entity_child)
 				entity_children.remove(index)
-				#p_entity_child.disconnect("attachment_points_pre_change", self, "refresh_attachment")
-				#p_entity_child.disconnect("attachment_points_post_change", self, "refresh_attachment")
 			else:
 				ErrorManager.error(
 					"_remove_entity_child: does not have entity child {child_name}!".format(
@@ -303,12 +298,6 @@ func _remove_from_attachment():
 		printerr("remove_from_attachment: not inside tree!")
 
 
-func attachment_points_pre_change() -> void:
-	emit_signal("attachment_points_pre_change")
-
-
-func attachment_points_post_change() -> void:
-	emit_signal("attachment_points_post_change")
 
 
 func get_entity_parent() -> Node:
@@ -436,9 +425,11 @@ func get_entity_type() -> String:
 		
 func send_entity_message(p_target_entity: Reference, p_message: String, p_message_args: Array) -> void:
 	EntityManager.send_entity_message(get_entity_ref(), p_target_entity, p_message, p_message_args)
-		
+
+
 func _receive_entity_message(p_message: String, p_args: Array) -> void:
 	emit_signal("entity_message", p_message, p_args)
+
 
 static func get_entity_properties(p_show_properties: bool) -> Array:
 	var usage: int
@@ -479,14 +470,17 @@ static func get_entity_properties(p_show_properties: bool) -> Array:
 	]
 
 	return entity_properties
-	
+
+
 func is_root_entity() -> bool:
 	return false
-	
+
+
 func _entity_cache() -> void:
 	if ! nodes_cached:
 		propagate_call("cache_nodes", [], true)
 		nodes_cached = true
+
 
 func _get_property_list() -> Array:
 	var properties: Array = get_entity_properties(is_root_entity())
