@@ -79,6 +79,12 @@ var network_logic_node_path: NodePath = NodePath()
 var network_logic_node: Node = null
 
 """
+RPC table Node
+"""
+var rpc_table_node_path: NodePath = NodePath()
+var rpc_table_node: Node = null
+
+"""
 """
 
 func _create_strong_exclusive_dependency(p_entity_ref: Reference) -> void:
@@ -165,7 +171,10 @@ func _entity_representation_process(p_delta: float) -> void:
 
 
 func _entity_physics_pre_process(p_delta) -> void:
-	_update_dependencies()
+	if simulation_logic_node:
+		simulation_logic_node._entity_physics_pre_process(p_delta)
+	else:
+		printerr("Missing simulation logic node!")
 
 
 func _entity_physics_process(p_delta: float) -> void:
@@ -373,6 +382,10 @@ func cache_nodes() -> void:
 	network_logic_node = get_node_or_null(network_logic_node_path)
 	if network_logic_node == self:
 		network_logic_node = null
+		
+	rpc_table_node = get_node_or_null(rpc_table_node_path)
+	if rpc_table_node == self:
+		rpc_table_node = null
 
 
 func get_entity() -> Node:
@@ -471,6 +484,13 @@ static func get_entity_properties(p_show_properties: bool) -> Array:
 			"usage": usage,
 			"hint": PROPERTY_HINT_FLAGS,
 			"hint_string":"NodePath"
+		},
+		{
+			"name":"rpc_table_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
 		}
 	]
 
@@ -480,6 +500,8 @@ static func get_entity_properties(p_show_properties: bool) -> Array:
 func is_root_entity() -> bool:
 	return false
 
+func get_rpc_table() -> Node:
+	return rpc_table_node
 
 func _entity_cache() -> void:
 	if ! nodes_cached:
@@ -502,6 +524,8 @@ func _get(p_property: String):
 			return network_identity_node_path
 		"network_logic_node_path":
 			return network_logic_node_path
+		"rpc_table_node_path":
+			return rpc_table_node_path
 
 func _set(p_property: String, p_value) -> bool:
 	match p_property:
@@ -516,6 +540,9 @@ func _set(p_property: String, p_value) -> bool:
 			return true
 		"network_logic_node_path":
 			network_logic_node_path = p_value
+			return true
+		"rpc_table_node_path":
+			rpc_table_node_path = p_value
 			return true
 			
 	return false

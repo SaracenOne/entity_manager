@@ -54,6 +54,10 @@ func _entity_representation_process(_delta: float) -> void:
 	pass
 
 
+func _entity_physics_pre_process(_delta: float) -> void:
+	pass
+
+
 func _entity_physics_process(_delta: float) -> void:
 	pass
 

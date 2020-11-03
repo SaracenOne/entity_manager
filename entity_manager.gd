@@ -5,6 +5,7 @@ export(int) var last_representation_process_usec: int = 0
 export(int) var last_physics_process_usec: int = 0
 export(int) var last_physics_post_process_usec: int = 0
 export(int) var last_physics_pre_process_usec: int = 0
+export(int) var last_update_dependencies_usec: int = 0
 
 class EntityJob extends Reference:
 	var entities: Array = []
@@ -205,6 +206,11 @@ func _physics_process(p_delta: float) -> void:
 	var scheduler_usec_start:int = OS.get_ticks_usec()
 	var jobs: Array = _create_entity_update_jobs()
 	var scheduler_overall_time:int = OS.get_ticks_usec() - scheduler_usec_start
+	
+	var entity_update_dependencies_usec_start: int = OS.get_ticks_usec()
+	for entity in entity_reference_dictionary.values():
+		entity._update_dependencies()
+	last_update_dependencies_usec = OS.get_ticks_usec() - entity_update_dependencies_usec_start
 	
 	var entity_pre_physics_process_usec_start:int = OS.get_ticks_usec()
 	for entity in entity_reference_dictionary.values():
