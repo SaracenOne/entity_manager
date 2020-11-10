@@ -7,6 +7,9 @@ export(int) var last_physics_post_process_usec: int = 0
 export(int) var last_physics_pre_process_usec: int = 0
 export(int) var last_update_dependencies_usec: int = 0
 
+const scene_tree_execution_table_const = preload("scene_tree_execution_table.gd")
+var scene_tree_execution_table: scene_tree_execution_table_const = scene_tree_execution_table_const.new()
+
 class EntityJob extends Reference:
 	var entities: Array = []
 	var overall_time_usec: int = 0
@@ -33,6 +36,24 @@ signal entity_removed(p_entity)
 
 signal process_complete(p_delta)
 signal physics_process_complete(p_delta)
+
+
+# Returns the root node all network entities should parented to
+func get_entity_root_node() -> Node:
+	return NetworkManager.get_entity_root_node()
+
+
+# Dispatches a deferred add/remove entity command to the scene tree execution table 
+func scene_tree_execution_command(p_command: int, p_entity_instance: Node, p_parent_instance: Node):
+	var parent_instance: Node = null
+	if p_parent_instance == null:
+		parent_instance = get_entity_root_node()
+	else:
+		parent_instance = p_parent_instance
+
+	scene_tree_execution_table.scene_tree_execution_command(
+		p_command, p_entity_instance, parent_instance
+	)
 
 
 func _add_entity(p_entity: Node) -> void:
@@ -76,10 +97,6 @@ func _entity_ready(p_entity: Node) -> void:
 func _entity_exiting(p_entity: Node) -> void:
 	_remove_entity(p_entity)
 	emit_signal("entity_removed", p_entity)
-
-
-func get_entity_root_node() -> Node:
-	return NetworkManager.get_entity_root_node()
 
 
 static func _has_immediate_dependency_link(p_dependent_entity: RuntimeEntity, p_dependency_entity: RuntimeEntity) -> bool:
@@ -183,6 +200,66 @@ func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef,
 	else:
 		printerr("Could not send message to target entity! No dependency link!")
 
+static func create_entity_instance(
+	p_packed_scene: PackedScene,
+	p_name: String = "NetEntity",
+	p_master_id: int = NetworkManager.network_constants_const.SERVER_MASTER_PEER_ID
+) -> Node:
+	print_debug(
+		"Creating entity instance {name} of type {type}".format(
+			{"name": p_name, "type": p_packed_scene.resource_path}
+		)
+	)
+	var instance: Node = p_packed_scene.instance()
+	instance.set_name(p_name)
+	instance.set_network_master(p_master_id)
+
+	return instance
+
+
+func instantiate_entity_and_setup(
+	p_packed_scene: PackedScene,
+	p_properties: Dictionary = {},
+	p_name: String = "NetEntity",
+	p_master_id: int = NetworkManager.network_constants_const.SERVER_MASTER_PEER_ID
+) -> Node:
+	var instance: Node = create_entity_instance(p_packed_scene, p_name, p_master_id)
+	
+	instance._entity_cache()
+	for key in p_properties.keys():
+		instance.simulation_logic_node.set(key, p_properties[key])
+	
+	instance._threaded_instance_setup(NetworkManager.network_entity_manager.NULL_NETWORK_INSTANCE_ID, null)
+	
+	instance._threaded_instance_post_setup()
+	
+	return instance
+	
+
+"""
+This method instantiates an entity and queues is to be added
+to the scene. It is the function which should be called by
+entities which spawn other entities which are required to
+be avaliable next frame.
+
+Return an EntityRef handle for the instance
+"""
+func spawn_entity(
+	p_packed_scene: PackedScene,
+	p_properties: Dictionary = {},
+	p_name: String = "NetEntity",
+	p_master_id: int = NetworkManager.network_constants_const.SERVER_MASTER_PEER_ID
+) -> EntityRef:
+	var instance: Node = instantiate_entity_and_setup(p_packed_scene, p_properties, p_name, p_master_id)
+	if instance:
+		EntityManager.scene_tree_execution_command(
+			EntityManager.scene_tree_execution_table_const.ADD_ENTITY,
+			instance,
+			null
+		)
+		return instance.get_entity_ref()
+	
+	return null
 
 func _process_reparenting() -> void:
 	for entity in reparent_pending.keys():
@@ -203,6 +280,8 @@ func _process(p_delta: float) -> void:
 
 
 func _physics_process(p_delta: float) -> void:
+	EntityManager.scene_tree_execution_table._execute_scene_tree_execution_table_unsafe()
+	
 	var scheduler_usec_start:int = OS.get_ticks_usec()
 	var jobs: Array = _create_entity_update_jobs()
 	var scheduler_overall_time:int = OS.get_ticks_usec() - scheduler_usec_start

@@ -40,3 +40,14 @@ func set_global_transform(p_global_transform: Transform, _p_update_physics: bool
 
 func _on_transform_changed() -> void:
 	pass
+
+func _set(p_property, p_value) -> bool:
+	match p_property:
+		"transform":
+			set_transform(p_value)
+			return true
+		"global_transform":
+			set_global_transform(p_value)
+			return true
+			
+	return false
