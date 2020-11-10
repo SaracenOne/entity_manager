@@ -11,6 +11,9 @@ Dependency Graph
 var representation_process_ticks_usec: int = 0
 var physics_process_ticks_usec: int = 0
 
+const node_3d_simulation_logic_const = preload("node_3d_simulation_logic.gd")
+const node_2d_simulation_logic_const = preload("node_2d_simulation_logic.gd")
+
 const mutex_lock_const = preload("res://addons/gdutil/mutex_lock.gd")
 
 var current_job: Reference = null
@@ -440,7 +443,16 @@ func get_entity_type() -> String:
 		return simulation_logic_node._entity_type
 	else:
 		return "Unknown Entity Type"
+
+func get_last_transform():
+	if simulation_logic_node and\
+	simulation_logic_node is node_2d_simulation_logic_const or\
+	simulation_logic_node is node_3d_simulation_logic_const:
+		return simulation_logic_node.get_last_transform()
 		
+	return Transform()
+
+
 func send_entity_message(p_target_entity: Reference, p_message: String, p_message_args: Array) -> void:
 	EntityManager.send_entity_message(get_entity_ref(), p_target_entity, p_message, p_message_args)
 

@@ -192,6 +192,12 @@ func get_entity_type_safe(p_target_entity: EntityRef) -> String:
 		return p_target_entity._entity.get_entity_type()
 	else:
 		return ""
+		
+func get_entity_last_transform_safe(p_target_entity: EntityRef) -> String:
+	if p_target_entity._entity:
+		return p_target_entity._entity.get_last_transform()
+	else:
+		return ""
 
 
 func send_entity_message(p_source_entity: EntityRef, p_target_entity: EntityRef, p_message: String, p_message_args: Array) -> void:
