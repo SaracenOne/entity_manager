@@ -12,25 +12,29 @@ enum {
 var scene_tree_execution_table: Array = []
 var _scene_tree_table_mutex: Mutex = Mutex.new()
 
+var root_node: Node = null
 
 # Adds an entity to the tree. Called exclusively in the main thread
-func _add_entity_instance_unsafe(p_instance: Node, p_parent: Node = null) -> void:
-	if p_parent:
-		NetworkLogger.printl("Adding entity: %s" % p_instance.get_name())
-		if p_instance.is_inside_tree():
-			NetworkLogger.error("Entity is already inside tree!")
+func _add_entity_instance_unsafe(p_instance: Node) -> void:
+	p_instance._entity_about_to_add()
+	
+	NetworkLogger.printl("Adding entity: %s" % p_instance.get_name())
+	if p_instance.is_inside_tree():
+		NetworkLogger.error("Entity is already inside tree!")
+	else:
+		var pending_entity_parent_ref: EntityRef = p_instance.pending_entity_parent_ref
+		if pending_entity_parent_ref:
+			var entity: RuntimeEntity = pending_entity_parent_ref._entity
+			var attachment_node: Node = entity.get_attachment_node(p_instance.pending_attachment_id)
+			attachment_node.add_child(p_instance)
 		else:
-			p_parent.add_child(p_instance)
+			root_node.add_child(p_instance)
 
 
 # Deletes an entity to the tree. Called exclusively in the main thread
 func _remove_entity_instance_unsafe(p_instance: Node) -> void:
 	NetworkLogger.printl("Removing entity: %s" % p_instance.get_name())
-	if p_instance.is_inside_tree():
-		p_instance.queue_free()
-		p_instance.get_parent().remove_child(p_instance)
-	else:
-		NetworkLogger.fatal_error("Entity is not inside tree!")
+	EntityManager._delete_entity_unsafe(p_instance)
 
 
 func copy_and_clear_scene_tree_execution_table() -> Array:
@@ -50,7 +54,7 @@ func _execute_scene_tree_execution_table_unsafe():
 	for entry in table:
 		match entry.command:
 			ADD_ENTITY:
-				_add_entity_instance_unsafe(entry.instance, entry.parent)
+				_add_entity_instance_unsafe(entry.instance)
 			REMOVE_ENTITY:
 				_remove_entity_instance_unsafe(entry.instance)
 
@@ -79,7 +83,7 @@ func scene_tree_execution_command(p_command: int, p_entity_instance: Node, p_par
 				"Scene Tree: Add Entity Command...%s" % p_entity_instance.get_name()
 			)
 			scene_tree_execution_table.push_front(
-				{"command": ADD_ENTITY, "instance": p_entity_instance, "parent": p_parent_instance}
+				{"command": ADD_ENTITY, "instance": p_entity_instance}
 			)
 		REMOVE_ENTITY:
 			NetworkLogger.printl(
@@ -89,6 +93,5 @@ func scene_tree_execution_command(p_command: int, p_entity_instance: Node, p_par
 				{
 					"command": REMOVE_ENTITY,
 					"instance": p_entity_instance,
-					"parent": p_parent_instance
 				}
 			)

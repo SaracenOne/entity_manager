@@ -25,6 +25,3 @@ func cache_nodes() -> void:
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
 	pass
 
-
-func _threaded_instance_post_setup() -> void:
-	pass

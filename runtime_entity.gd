@@ -37,20 +37,16 @@ var nodes_cached: bool = false
 """
 Parenting
 """
-enum {
-	ENTITY_PARENT_STATE_OK,
-	ENTITY_PARENT_STATE_CHANGED,
-	ENTITY_PARENT_STATE_INVALID,
-}
 
+signal entity_parent_changed
 signal entity_message(p_message, p_args)
 signal entity_deletion
-signal entity_parent_changed
 
-var entity_parent_state: int = ENTITY_PARENT_STATE_OK
-var entity_parent: Node = null
-var entity_children: Array = []
-var attachment_id: int = 0
+var pending_entity_parent_ref: EntityRef = null
+var pending_attachment_id: int = 0
+var cached_entity_parent: Node = null
+var cached_entity_attachment_id: int = 0
+var cached_entity_children: Array = []
 
 """
 Entity Manager
@@ -135,6 +131,13 @@ func process_master_request(p_id: int) -> void:
 	set_network_master(p_id)
 
 
+func _entity_about_to_add() -> void:
+	if network_logic_node:
+		network_logic_node._entity_about_to_add()
+	else:
+		printerr("Missing network logic node")
+			
+
 func _entity_ready() -> void:
 	_entity_cache()
 	
@@ -159,12 +162,11 @@ func _entity_ready() -> void:
 
 func _entity_representation_process(p_delta: float) -> void:
 	var start_ticks: int = OS.get_ticks_usec()
-	
+				
 	if network_logic_node:
 		network_logic_node._entity_representation_process(p_delta)
 	else:
 		printerr("Missing network logic node")
-			
 	if simulation_logic_node:
 		simulation_logic_node._entity_representation_process(p_delta)
 	else:
@@ -186,6 +188,10 @@ func _entity_physics_process(p_delta: float) -> void:
 	# Clear the job for next time the scheduler is run
 	current_job = null
 	
+	if network_logic_node:
+		network_logic_node._entity_physics_process(p_delta)
+	else:
+		printerr("Missing network logic node")
 	if simulation_logic_node:
 		simulation_logic_node._entity_physics_process(p_delta)
 	else:
@@ -214,159 +220,51 @@ func get_attachment_node(p_attachment_id: int) -> Node:
 	return simulation_logic_node.get_attachment_node(p_attachment_id)
 
 
-func _add_entity_child_internal(p_entity_child: Node) -> void:
-	if p_entity_child:
-		var child_name: String = p_entity_child.get_name()
-		if entity_children.has(p_entity_child):
-			ErrorManager.error(
-				"_add_entity_child: does not have entity child {child_name}!".format(
-					{"child_name": child_name}
-				)
-			)
-		else:
-			entity_children.push_back(p_entity_child)
+func _cache_entity_parent() -> void:
+	var parent: Node = get_parent()
+	if parent and parent.has_method("get_entity"):
+		cached_entity_parent = parent.get_entity()
+		cached_entity_attachment_id = pending_attachment_id
 	else:
-		ErrorManager.error("_add_entity_child: attempted to add null entity child!")
-
-
-func _remove_entity_child_internal(p_entity_child: Node) -> void:
-	if p_entity_child:
-		var child_name: String = p_entity_child.get_name()
-		if entity_children.has(p_entity_child):
-			var index = entity_children.find(p_entity_child)
-			if index != -1:
-				simulation_logic_node.entity_child_pre_remove(p_entity_child)
-				entity_children.remove(index)
-			else:
-				ErrorManager.error(
-					"_remove_entity_child: does not have entity child {child_name}!".format(
-						{"child_name": child_name}
-					)
-				)
-		else:
-			ErrorManager.error(
-				"_remove_entity_child: does not have entity child {child_name}!".format(
-					{"child_name": child_name}
-				)
-			)
-	else:
-		ErrorManager.error("_remove_entity_child: attempted to remove null entity child!")
-
-
-func _has_entity_parent_internal() -> bool:
-	if entity_parent != null:
-		if entity_parent.get_script() == get_script():
-			return true
-
-	return false
-
-
-func _set_entity_parent_internal(p_node: Node) -> void:
-	var new_entity_parent: Node = null
-
-	# Check if this node
-	if p_node and p_node.has_method("get_entity"):
-		new_entity_parent = p_node.call("get_entity")
-
-	# If it has the same parent, don't change anything
-	if new_entity_parent == entity_parent:
-		return
-
-	# Remove any previous parents
-	if _has_entity_parent_internal():
-		entity_parent._remove_entity_child_internal(self)
-
-	# Set the entity parent if its a valid entity
-	if (
-		new_entity_parent == null
-		or (new_entity_parent and new_entity_parent.get_script() == get_script())
-	):
-		entity_parent = new_entity_parent
-
-	# If the entity parent is not null, check if it is valid, and then add it to its list of children
-	if entity_parent != null:
-		entity_parent._add_entity_child_internal(self)
-
-
-func _add_to_attachment(p_entity_parent: Spatial, p_attachment_id: int):
-	# Remove it from the tree and remove its original entity parent
-	if is_inside_tree():
-		printerr("add_to_attachment: already inside tree!")
-	else:
-		# Now add it back into the tree which will automatically reparent it
-		if p_entity_parent:
-			p_entity_parent.get_attachment_node(attachment_id).add_child(self)
-		else:
-			NetworkManager.network_replication_manager.get_entity_root_node().add_child(self)
-
-		# Hacky workaround!
-		if ! is_connected("tree_exiting", self, "_entity_deletion"):
-			if connect("tree_exiting", self, "_entity_deletion") != OK:
-				printerr("entity: tree_exiting could not be connected!")
-
-
-func _remove_from_attachment():
-	# Remove it from the tree and remove its original entity parent
-	if is_inside_tree():
-		# Hacky workaround!
-		if is_connected("tree_exiting", self, "_entity_deletion"):
-			disconnect("tree_exiting", self, "_entity_deletion")
-
-		get_parent().remove_child(self)
-	else:
-		printerr("remove_from_attachment: not inside tree!")
+		cached_entity_parent = null
 
 
 func get_entity_parent() -> Node:
-	return entity_parent
+	return cached_entity_parent
 
 
-func set_entity_parent(p_entity_parent: Node, p_attachment_id: int) -> void:
-	# Same parent, no update needed
-	if p_entity_parent == entity_parent and p_attachment_id == attachment_id:
-		return
+func set_pending_parent_entity(p_entity_parent_ref: EntityRef, p_attachment_id: int) -> bool:
+	if p_entity_parent_ref != pending_entity_parent_ref or p_attachment_id != pending_attachment_id:
+		pending_entity_parent_ref = p_entity_parent_ref
+		pending_attachment_id = p_attachment_id
+		
+		return true
+	else:
+		return false
 
-	# Set the new attachment id
-	attachment_id = p_attachment_id
-
-	# Save the global transform
-	var last_global_transform: Transform = Transform()
-
-	if simulation_logic_node:
-		last_global_transform = simulation_logic_node.get_global_transform()
-
-	# Remove it from the tree and remove its original entity parent
-	if is_inside_tree():
-		_remove_from_attachment()
-
-	# Make sure that the entity parent is null or a valid entity node
-	if p_entity_parent == null or (p_entity_parent.get_script() == get_script()):
-		# Now add it back into the tree which will automatically reparent it
-		_add_to_attachment(p_entity_parent, attachment_id)
-
-		# Reload the previously saved global transform
-		if simulation_logic_node:
-			simulation_logic_node.set_global_transform(last_global_transform)
-
-	emit_signal("entity_parent_changed")
-
-
-func clear_entity_parent() -> void:
-	set_entity_parent(null, 0)
+func request_reparent_entity(p_entity_parent_ref: EntityRef, p_attachment_id: int) -> void:
+	if set_pending_parent_entity(p_entity_parent_ref, p_attachment_id):
+		if is_inside_tree():
+			if ! EntityManager.reparent_pending.has(self):
+				EntityManager.reparent_pending.push_back(self)
 
 
 func _enter_tree() -> void:
 	if ! Engine.is_editor_hint():
-		if _has_entity_parent_internal():
-			ErrorManager.error("Entity is trying to enter the tree with an existing entity parent!")
-		else:
-			_set_entity_parent_internal(get_parent())
+		_cache_entity_parent()
+		var entity_parent: Node = get_entity_parent()
+		if entity_parent:
+			pending_entity_parent_ref = entity_parent.get_entity_ref()
+			entity_parent.cached_entity_children.push_back(self)
+			
+		emit_signal("entity_parent_changed")
 
 
 func _exit_tree() -> void:
 	if ! Engine.is_editor_hint():
-		if _has_entity_parent_internal():
-			_set_entity_parent_internal(null)
+		var entity_parent: Node = get_entity_parent()
+		if entity_parent:
+			entity_parent.cached_entity_children.erase(self)
 
 
 func cache_nodes() -> void:
@@ -401,7 +299,9 @@ func get_entity_ref() -> Reference:
 
 func _entity_deletion() -> void:
 	emit_signal("entity_deletion")
-	entity_manager._entity_exiting(self)
+	for dependent in strong_exclusive_dependents:
+		dependent.strong_exclusive_dependencies.erase(self)
+	entity_manager._entity_deleting(self)
 
 
 func can_request_master_from_peer(p_id: int) -> bool:
@@ -453,11 +353,11 @@ func get_last_transform():
 	return Transform()
 
 
-func send_entity_message(p_target_entity: Reference, p_message: String, p_message_args: Array) -> void:
+func send_entity_message(p_target_entity: Reference, p_message: String, p_message_args: Dictionary) -> void:
 	EntityManager.send_entity_message(get_entity_ref(), p_target_entity, p_message, p_message_args)
 
 
-func _receive_entity_message(p_message: String, p_args: Array) -> void:
+func _receive_entity_message(p_message: String, p_args: Dictionary) -> void:
 	emit_signal("entity_message", p_message, p_args)
 
 
@@ -561,9 +461,10 @@ func _set(p_property: String, p_value) -> bool:
 	
 func _notification(what) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		entity_ref._entity = null
-		for dependent in strong_exclusive_dependents:
-			dependent.strong_exclusive_dependencies.erase(self)
+		if ! Engine.is_editor_hint():
+			entity_ref._entity = null
+				
+			_entity_deletion()
 
 func _ready() -> void:
 	if ! Engine.is_editor_hint():
@@ -573,8 +474,6 @@ func _ready() -> void:
 
 			if connect("ready", entity_manager, "_entity_ready", [self]) != OK:
 				printerr("entity: ready could not be connected!")
-			if connect("tree_exiting", self, "_entity_deletion") != OK:
-				printerr("entity: tree_exiting could not be connected!")
 
 
 func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -> void:
@@ -586,8 +485,3 @@ func _threaded_instance_setup(p_instance_id: int, p_network_reader: Reference) -
 		network_logic_node._threaded_instance_setup(p_instance_id, p_network_reader)
 	if network_identity_node:
 		network_identity_node._threaded_instance_setup(p_instance_id, p_network_reader)
-
-
-func _threaded_instance_post_setup() -> void:
-	if simulation_logic_node:
-		simulation_logic_node._threaded_instance_post_setup()
