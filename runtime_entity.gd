@@ -123,7 +123,7 @@ func _update_dependencies() -> void:
 
 func request_to_become_master() -> void:
 	NetworkManager.network_replication_manager.request_to_become_master(
-		self, NetworkManager.get_current_peer_id()
+		network_identity_node.network_instance_id, self, NetworkManager.get_current_peer_id()
 	)
 
 
