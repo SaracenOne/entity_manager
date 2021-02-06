@@ -86,6 +86,19 @@ var rpc_table_node: Node = null
 """
 """
 
+func clear_entity_signal_connections() -> void:
+	var entity_message_connections: Array = get_signal_connection_list("entity_message")
+	for connection in entity_message_connections:
+		disconnect(connection["signal"], connection["target"], connection["method"])
+	
+	var entity_deletion_connections: Array = get_signal_connection_list("entity_deletion")
+	for connection in entity_deletion_connections:
+		disconnect(connection["signal"], connection["target"], connection["method"])
+
+	var entity_parent_changed_connections: Array = get_signal_connection_list("entity_deletion")
+	for connection in entity_parent_changed_connections:
+		disconnect(connection["signal"], connection["target"], connection["method"])
+	
 func _create_strong_exclusive_dependency(p_entity_ref: Reference) -> void:
 	var mutex_lock: mutex_lock_const = mutex_lock_const.new(dependency_mutex)
 	pending_dependency_commands.push_back({"command":DependencyCommand.ADD_STRONG_EXCLUSIVE_DEPENDENCY, "entity":p_entity_ref})
