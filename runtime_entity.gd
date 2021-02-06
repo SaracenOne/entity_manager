@@ -314,7 +314,9 @@ func _entity_deletion() -> void:
 	emit_signal("entity_deletion")
 	for dependent in strong_exclusive_dependents:
 		dependent.strong_exclusive_dependencies.erase(self)
-	entity_manager._entity_deleting(self)
+		
+	if entity_manager:
+		entity_manager._entity_deleting(self)
 
 
 func can_request_master_from_peer(p_id: int) -> bool:
