@@ -67,7 +67,7 @@ func _remove_entity(p_entity: Node) -> void:
 func _delete_entity_unsafe(p_entity: Node) -> void:
 	if p_entity and ! p_entity.is_queued_for_deletion():
 		# Set all the children of this entity to root
-		for entity_child in p_entity.cached_entity_children:
+		for entity_child in p_entity.hierarchy_component_node.cached_entity_children:
 			_reparent_unsafe(entity_child, null, 0)
 			
 		p_entity.queue_free()
@@ -295,7 +295,7 @@ func _reparent_unsafe(p_entity: Node, p_entity_parent_ref: EntityRef, p_attachme
 
 func _process_reparenting() -> void:
 	for entity in reparent_pending:
-		_reparent_unsafe(entity, entity.pending_entity_parent_ref, entity.pending_attachment_id)
+		_reparent_unsafe(entity, entity.hierarchy_component_node.pending_entity_parent_ref, entity.hierarchy_component_node.pending_attachment_id)
 		
 	reparent_pending.clear()
 

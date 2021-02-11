@@ -22,7 +22,11 @@ func _add_entity_instance_unsafe(p_instance: Node) -> void:
 	if p_instance.is_inside_tree():
 		NetworkLogger.error("Entity is already inside tree!")
 	else:
-		var pending_entity_parent_ref: EntityRef = p_instance.pending_entity_parent_ref
+		var pending_entity_parent_ref: EntityRef = \
+		p_instance.hierarchy_component_node.pending_entity_parent_ref\
+		if p_instance.hierarchy_component_node\
+		else null
+		
 		if pending_entity_parent_ref:
 			var entity: RuntimeEntity = pending_entity_parent_ref._entity
 			var attachment_node: Node = entity.get_attachment_node(p_instance.pending_attachment_id)

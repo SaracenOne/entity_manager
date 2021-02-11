@@ -38,15 +38,8 @@ var nodes_cached: bool = false
 Parenting
 """
 
-signal entity_parent_changed
 signal entity_message(p_message, p_args)
 signal entity_deletion
-
-var pending_entity_parent_ref: EntityRef = null
-var pending_attachment_id: int = 0
-var cached_entity_parent: Node = null
-var cached_entity_attachment_id: int = 0
-var cached_entity_children: Array = []
 
 """
 Entity Manager
@@ -58,6 +51,12 @@ Transform Notification
 """
 var transform_notification_node_path: NodePath = NodePath()
 var transform_notification_node: Node = null
+
+"""
+Hierarchy Component Node
+"""
+var hierarchy_component_node_path: NodePath = NodePath()
+var hierarchy_component_node: Node = null
 
 """
 Simulation Logic Node
@@ -93,10 +92,6 @@ func clear_entity_signal_connections() -> void:
 	
 	var entity_deletion_connections: Array = get_signal_connection_list("entity_deletion")
 	for connection in entity_deletion_connections:
-		disconnect(connection["signal"], connection["target"], connection["method"])
-
-	var entity_parent_changed_connections: Array = get_signal_connection_list("entity_deletion")
-	for connection in entity_parent_changed_connections:
 		disconnect(connection["signal"], connection["target"], connection["method"])
 	
 func _create_strong_exclusive_dependency(p_entity_ref: Reference) -> void:
@@ -233,57 +228,14 @@ func get_attachment_node(p_attachment_id: int) -> Node:
 	return simulation_logic_node.get_attachment_node(p_attachment_id)
 
 
-func _cache_entity_parent() -> void:
-	var parent: Node = get_parent()
-	if parent and parent.has_method("get_entity"):
-		cached_entity_parent = parent.get_entity()
-		cached_entity_attachment_id = pending_attachment_id
-	else:
-		cached_entity_parent = null
-
-
-func get_entity_parent() -> Node:
-	return cached_entity_parent
-
-
-func set_pending_parent_entity(p_entity_parent_ref: EntityRef, p_attachment_id: int) -> bool:
-	if p_entity_parent_ref != pending_entity_parent_ref or p_attachment_id != pending_attachment_id:
-		pending_entity_parent_ref = p_entity_parent_ref
-		pending_attachment_id = p_attachment_id
-		
-		return true
-	else:
-		return false
-
-func request_reparent_entity(p_entity_parent_ref: EntityRef, p_attachment_id: int) -> void:
-	if set_pending_parent_entity(p_entity_parent_ref, p_attachment_id):
-		if is_inside_tree():
-			if ! EntityManager.reparent_pending.has(self):
-				EntityManager.reparent_pending.push_back(self)
-
-
-func _enter_tree() -> void:
-	if ! Engine.is_editor_hint():
-		_cache_entity_parent()
-		var entity_parent: Node = get_entity_parent()
-		if entity_parent:
-			pending_entity_parent_ref = entity_parent.get_entity_ref()
-			entity_parent.cached_entity_children.push_back(self)
-			
-		emit_signal("entity_parent_changed")
-
-
-func _exit_tree() -> void:
-	if ! Engine.is_editor_hint():
-		var entity_parent: Node = get_entity_parent()
-		if entity_parent:
-			entity_parent.cached_entity_children.erase(self)
-
-
 func cache_nodes() -> void:
 	transform_notification_node = get_node_or_null(transform_notification_node_path)
 	if transform_notification_node == self:
 		transform_notification_node = null
+		
+	hierarchy_component_node = get_node_or_null(hierarchy_component_node_path)
+	if hierarchy_component_node == self:
+		hierarchy_component_node = null
 
 	simulation_logic_node = get_node_or_null(simulation_logic_node_path)
 	if simulation_logic_node == self:
@@ -392,6 +344,13 @@ static func get_entity_properties(p_show_properties: bool) -> Array:
 			"hint_string":"NodePath"
 		},
 		{
+			"name":"hierarchy_component_node_path",
+			"type":TYPE_NODE_PATH,
+			"usage": usage,
+			"hint": PROPERTY_HINT_FLAGS,
+			"hint_string":"NodePath"
+		},
+		{
 			"name":"simulation_logic_node_path",
 			"type":TYPE_NODE_PATH,
 			"usage": usage,
@@ -445,6 +404,8 @@ func _get(p_property: String):
 	match p_property:
 		"transform_notification_node_path":
 			return transform_notification_node_path
+		"hierarchy_component_node_path":
+			return hierarchy_component_node_path
 		"simulation_logic_node_path":
 			return simulation_logic_node_path
 		"network_identity_node_path":
@@ -458,6 +419,9 @@ func _set(p_property: String, p_value) -> bool:
 	match p_property:
 		"transform_notification_node_path":
 			transform_notification_node_path = p_value
+			return true
+		"hierarchy_component_node_path":
+			hierarchy_component_node_path = p_value
 			return true
 		"simulation_logic_node_path":
 			simulation_logic_node_path = p_value
